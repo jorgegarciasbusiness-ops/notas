@@ -2,12 +2,20 @@
  * Capa de datos de la app. Los sectores solo hablan con "Datos".
  * - Si js/config.js tiene los datos de Supabase: guarda en la nube y pide entrar con tu correo.
  * - Si no: modo prueba, guarda en este navegador con datos de ejemplo.
+ * Cada tabla ofrece lo mismo: listar(), crear(datos), actualizar(id, cambios), borrar(id).
  */
 const Datos = (() => {
   const pad = n => String(n).padStart(2, '0');
   const aISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const nuevoId = () => (crypto.randomUUID ? crypto.randomUUID()
     : Date.now().toString(36) + Math.random().toString(36).slice(2));
+
+  // Cómo es cada tabla: por qué campo se ordena y si lleva fecha de "actualizado"
+  const TABLAS = {
+    agenda: { orden: 'fecha', actualizado: true },
+    bandeja: { orden: 'creado', actualizado: false },
+    paginas: { orden: 'titulo', actualizado: true },
+  };
 
   const hayNube = typeof CONFIG !== 'undefined' && CONFIG.supabaseUrl && CONFIG.supabaseClave;
   return hayNube ? nube() : local();
@@ -17,38 +25,46 @@ const Datos = (() => {
     if (!window.supabase) {
       // No ha cargado la pieza de Supabase (sin internet): se pide entrar y avisa del fallo
       const sinConexion = async () => { throw new Error('sin conexión'); };
-      return { modo: 'nube', agenda: {}, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
+      const vacia = { listar: sinConexion, crear: sinConexion, actualizar: sinConexion, borrar: sinConexion };
+      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
     }
     const sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseClave);
     const comprobar = ({ data, error }) => { if (error) throw error; return data; };
-    // En la nube la hora y las notas vacías se guardan como "nada"; la app las quiere como texto vacío
-    const limpiar = f => ({ ...f, hora: f.hora ? f.hora.slice(0, 5) : '', notas: f.notas || '' });
-    const preparar = d => {
+    const quitarSistema = d => {
       const x = { ...d };
-      if ('hora' in x) x.hora = x.hora || null;
       delete x.id; delete x.creado; delete x.actualizado; delete x.user_id;
       return x;
     };
 
-    const agenda = {
-      async listar() {
-        return comprobar(await sb.from('agenda').select('*').order('fecha')).map(limpiar);
-      },
-      async crear(datos) {
-        return limpiar(comprobar(await sb.from('agenda').insert(preparar(datos)).select().single()));
-      },
-      async actualizar(id, cambios) {
-        const fila = { ...preparar(cambios), actualizado: new Date().toISOString() };
-        return limpiar(comprobar(await sb.from('agenda').update(fila).eq('id', id).select().single()));
-      },
-      async borrar(id) {
-        comprobar(await sb.from('agenda').delete().eq('id', id));
-      },
-    };
+    function tabla(nombre, { limpiar = f => f, preparar = d => d } = {}) {
+      const { orden, actualizado } = TABLAS[nombre];
+      return {
+        async listar() {
+          return comprobar(await sb.from(nombre).select('*').order(orden)).map(limpiar);
+        },
+        async crear(datos) {
+          return limpiar(comprobar(await sb.from(nombre).insert(quitarSistema(preparar(datos))).select().single()));
+        },
+        async actualizar(id, cambios) {
+          const fila = quitarSistema(preparar(cambios));
+          if (actualizado) fila.actualizado = new Date().toISOString();
+          return limpiar(comprobar(await sb.from(nombre).update(fila).eq('id', id).select().single()));
+        },
+        async borrar(id) {
+          comprobar(await sb.from(nombre).delete().eq('id', id));
+        },
+      };
+    }
 
     return {
       modo: 'nube',
-      agenda,
+      // En la nube la hora y las notas vacías se guardan como "nada"; la app las quiere como texto vacío
+      agenda: tabla('agenda', {
+        limpiar: f => ({ ...f, hora: f.hora ? f.hora.slice(0, 5) : '', notas: f.notas || '' }),
+        preparar: d => ('hora' in d ? { ...d, hora: d.hora || null } : d),
+      }),
+      bandeja: tabla('bandeja'),
+      paginas: tabla('paginas'),
       async sesion() { const { data } = await sb.auth.getSession(); return data.session; },
       async entrar(email, clave) {
         const { error } = await sb.auth.signInWithPassword({ email, password: clave });
@@ -60,22 +76,12 @@ const Datos = (() => {
 
   // ---------- Modo prueba (este navegador) ----------
   function local() {
-    const CLAVE = 'notas.agenda.v1';
-
-    function leer() {
-      try {
-        const texto = localStorage.getItem(CLAVE);
-        return texto ? JSON.parse(texto) : null;
-      } catch { return null; }
-    }
-    function escribir(lista) {
-      try { localStorage.setItem(CLAVE, JSON.stringify(lista)); } catch { /* sin espacio o bloqueado */ }
-    }
+    const dia = n => { const d = new Date(); d.setDate(d.getDate() + n); return aISO(d); };
+    const ahora = () => new Date().toISOString();
 
     // Datos de prueba, colocados alrededor de hoy
-    function ejemplos() {
-      const dia = n => { const d = new Date(); d.setDate(d.getDate() + n); return aISO(d); };
-      const filas = [
+    const EJEMPLOS = {
+      agenda: () => [
         ['Revisar el contrato', 'Trabajo', 'Tarea', 'Alta', 'Sin empezar', 0, '18:00'],
         ['Primer día de trabajo', 'Trabajo', 'Evento Personal', 'Alta', 'Sin empezar', 2, '09:00'],
         ['Entreno: pierna', 'Salud', 'Tarea', 'Media', 'Listo', -1, '10:00'],
@@ -91,42 +97,58 @@ const Datos = (() => {
         ['Comprar zapatillas', 'Personal', 'Tarea', 'Baja', 'Sin empezar', 9, ''],
         ['Próximo lanzamiento', 'Kok$', 'Meta', 'Alta', 'Sin empezar', 33, ''],
         ['Mixtape lista', 'Amor', 'Meta', 'Media', 'Sin empezar', 70, ''],
-      ];
-      const ahora = new Date().toISOString();
-      return filas.map(([nombre, ambito, tipo, prioridad, estado, n, hora]) => ({
+      ].map(([nombre, ambito, tipo, prioridad, estado, n, hora]) => ({
         id: nuevoId(), nombre, fecha: dia(n), hora, tipo, prioridad, estado, ambito, notas: '',
-        creado: ahora, actualizado: ahora,
-      }));
-    }
-
-    let entradas = leer();
-    if (!entradas) { entradas = ejemplos(); escribir(entradas); }
-
-    const agenda = {
-      async listar() { return entradas.map(e => ({ ...e })); },
-      async crear(datos) {
-        const ahora = new Date().toISOString();
-        const nueva = { id: nuevoId(), notas: '', hora: '', ...datos, creado: ahora, actualizado: ahora };
-        entradas.push(nueva);
-        escribir(entradas);
-        return { ...nueva };
-      },
-      async actualizar(id, cambios) {
-        const e = entradas.find(x => x.id === id);
-        if (!e) return null;
-        Object.assign(e, cambios, { id, actualizado: new Date().toISOString() });
-        escribir(entradas);
-        return { ...e };
-      },
-      async borrar(id) {
-        entradas = entradas.filter(x => x.id !== id);
-        escribir(entradas);
-      },
+        creado: ahora(), actualizado: ahora(),
+      })),
+      bandeja: () => [
+        'Idea: grabar el gancho en el metro',
+        'Mirar precio de unos auriculares de estudio',
+      ].map(texto => ({ id: nuevoId(), texto, creado: ahora() })),
+      paginas: () => [
+        { titulo: 'Plan de prueba', seccion: 'Finanzas', contenido: '## Resumen\n\n| Partida | Importe |\n| --- | --- |\n| Fijos | 50 € |\n| Ahorro | 100 € |\n\n- [x] Abrir la app\n- [ ] Probar a editar esta página' },
+        { titulo: 'Ideas de contenido', seccion: 'Kok$', contenido: '## Formatos\n\n- **Gancho en 10 sitios**\n- Detrás de cámaras\n\n> Lo que funciona se repite.' },
+      ].map(p => ({ id: nuevoId(), orden: 0, creado: ahora(), actualizado: ahora(), ...p })),
     };
+
+    function tabla(nombre) {
+      const CLAVE = `notas.${nombre}.v1`;
+      let filas = null;
+      try { const t = localStorage.getItem(CLAVE); filas = t ? JSON.parse(t) : null; } catch { /* sin memoria */ }
+      const escribir = () => { try { localStorage.setItem(CLAVE, JSON.stringify(filas)); } catch { /* sin espacio */ } };
+      if (!filas) { filas = EJEMPLOS[nombre](); escribir(); }
+      const { orden, actualizado } = TABLAS[nombre];
+      return {
+        async listar() {
+          return filas.map(f => ({ ...f })).sort((a, b) => String(a[orden]).localeCompare(String(b[orden])));
+        },
+        async crear(datos) {
+          const nueva = { id: nuevoId(), ...datos, creado: ahora() };
+          if (actualizado) nueva.actualizado = ahora();
+          filas.push(nueva);
+          escribir();
+          return { ...nueva };
+        },
+        async actualizar(id, cambios) {
+          const f = filas.find(x => x.id === id);
+          if (!f) return null;
+          Object.assign(f, cambios, { id });
+          if (actualizado) f.actualizado = ahora();
+          escribir();
+          return { ...f };
+        },
+        async borrar(id) {
+          filas = filas.filter(x => x.id !== id);
+          escribir();
+        },
+      };
+    }
 
     return {
       modo: 'local',
-      agenda,
+      agenda: tabla('agenda'),
+      bandeja: tabla('bandeja'),
+      paginas: tabla('paginas'),
       async sesion() { return { local: true }; },
       async entrar() {},
       async salir() {},

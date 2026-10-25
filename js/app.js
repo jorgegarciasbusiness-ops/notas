@@ -16,13 +16,22 @@ function avisar(texto) {
 /* Arranque: entrar con tu correo (si hay nube), cambiar de sector y montar cada uno */
 (() => {
   const contenido = document.getElementById('contenido');
-  const sectores = { agenda: Agenda };
+  const sectores = { agenda: Agenda, bandeja: Bandeja, paginas: Paginas };
   let actual = null;
 
   function abrir(nombre) {
     actual = nombre;
+    try { localStorage.setItem('notas.sector', nombre); } catch { /* sin memoria */ }
     document.querySelectorAll('.sector').forEach(b => b.classList.toggle('activo', b.dataset.sector === nombre));
+    // Cada sector pone sus propios manejadores; se quitan los del anterior
+    contenido.onclick = contenido.onsubmit = contenido.onmousedown = null;
     sectores[nombre].montar(contenido);
+  }
+
+  function ultimoSector() {
+    let s = null;
+    try { s = localStorage.getItem('notas.sector'); } catch { /* sin memoria */ }
+    return sectores[s] ? s : 'agenda';
   }
 
   document.querySelector('.sectores').addEventListener('click', ev => {
@@ -88,7 +97,7 @@ function avisar(texto) {
       try {
         await Datos.entrar(f.elements.email.value.trim(), f.elements.clave.value);
         document.body.classList.remove('sin-sesion');
-        abrir('agenda');
+        abrir(ultimoSector());
       } catch (e) {
         error.textContent = /invalid/i.test(e.message || '') ? 'Correo o contraseña incorrectos.' : 'No se ha podido entrar. Revisa la conexión.';
         error.hidden = false;
@@ -101,7 +110,7 @@ function avisar(texto) {
   (async () => {
     let sesion = null;
     try { sesion = await Datos.sesion(); } catch { /* sin conexión: se pide entrar */ }
-    if (sesion) abrir('agenda');
+    if (sesion) abrir(ultimoSector());
     else pantallaEntrar();
   })();
 })();
