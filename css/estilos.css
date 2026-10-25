@@ -338,6 +338,11 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
 .fin-mini i { display: block; height: 100%; background: var(--verde); }
 .fin-mini.pasado i { background: var(--peligro); }
 .fin-horas { max-width: 640px; }
+.fin-previsto { color: var(--acento); font-weight: 600; font-size: 11px; }
+.fin-semana small { color: var(--suave); font-size: 11px; margin-left: 4px; }
+.fin-semana small.fin-previsto { color: var(--acento); }
+.fin-enlace { color: var(--acento); font-size: 14px; text-align: left; padding: 0; }
+.fin-enlace:hover { text-decoration: underline; }
 .fin-horas .fin-cifra { margin-bottom: 10px; }
 
 /* ---------- Formulario ---------- */
