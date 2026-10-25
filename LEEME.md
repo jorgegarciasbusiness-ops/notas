@@ -53,6 +53,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja y Páginas (Fin
 - Usuario: lo crea Koke en Supabase (Authentication → Users → Add user). Registro público desactivado.
 - Nube: proyecto Supabase **notas** (organización "Koke", plan gratis, Europa) · `https://dvsnwwabycgpeqgqpvgj.supabase.co`. Registro público desactivado.
 - Publicación: GitHub Pages desde `github.com/jorgegarciasbusiness-ops/notas` (público: el código se ve, los datos no). Rama `main`, raíz.
+- **Versión**: GitHub Pages deja los archivos en caché 10 min y el iPhone se queda con la versión vieja. Con cada publicación se sube el número en `index.html` (`VERSION` y todos los `?v=`) y en `version.json`; la app compara al abrirse y al volver a ella, y si hay una nueva se recarga sola. `version.json` se sube el último.
 - Cómo publicar cambios: no hay git en local con sesión de GitHub. Se copian los archivos cambiados al scratchpad y se suben con Claude in Chrome (sesión de Koke) en `github.com/jorgegarciasbusiness-ops/notas/upload/main/<carpeta>`. `IDEA.md` no se sube (notas privadas).
 - Si se cambia algo de la base de datos: nuevo `nube/NN-*.sql`, ejecutarlo en el editor SQL de Supabase y subirlo también al repositorio.
 - Cada sector es un archivo en `js/` con `montar()` y `refrescar()`; se registra en `js/app.js` y en el menú de `index.html`. `app.js` limpia `onclick/onsubmit/onmousedown` del contenedor al cambiar de sector.

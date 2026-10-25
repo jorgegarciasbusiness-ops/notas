@@ -15,7 +15,9 @@
 <meta name="apple-mobile-web-app-title" content="Notas">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#222220" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="css/estilos.css">
+<!-- VERSION: cambiarla aquí, en los ?v= de abajo y en version.json con cada publicación (así el iPhone se actualiza solo) -->
+<script>const VERSION = '2026-10-25.2';</script>
+<link rel="stylesheet" href="css/estilos.css?v=2026-10-25.2">
 <script>try { const t = localStorage.getItem('notas.tema'); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
 </head>
 <body>
@@ -35,11 +37,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
-<script src="js/config.js"></script>
-<script src="js/datos.js"></script>
-<script src="js/agenda.js"></script>
-<script src="js/bandeja.js"></script>
-<script src="js/paginas.js"></script>
-<script src="js/app.js"></script>
+<script src="js/config.js?v=2026-10-25.2"></script>
+<script src="js/datos.js?v=2026-10-25.2"></script>
+<script src="js/agenda.js?v=2026-10-25.2"></script>
+<script src="js/bandeja.js?v=2026-10-25.2"></script>
+<script src="js/paginas.js?v=2026-10-25.2"></script>
+<script src="js/app.js?v=2026-10-25.2"></script>
 </body>
 </html>
