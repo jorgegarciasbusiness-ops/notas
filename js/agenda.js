@@ -1,0 +1,287 @@
+/* Sector Agenda: vistas de mes, semana y tablero por ámbito */
+const Agenda = (() => {
+  // Mismas opciones que el Calendario de Notion, para poder migrar sin pérdidas
+  const AMBITOS = ['Trabajo', 'Kok$', 'Amor', 'Salud', 'Finanzas', 'Curros', 'Personal'];
+  const TIPOS = ['Tarea', 'Evento Personal', 'Cita', 'Reunión', 'Recordatorio', 'Music', 'content', 'ALMOALB', 'Meta'];
+  const PRIORIDADES = ['Alta', 'Media', 'Baja'];
+  const ESTADOS = ['Sin empezar', 'En progreso', 'Listo', 'Cancelado'];
+
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const DIAS_CORTOS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
+  const DIAS_LARGOS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+  const PESO = { Alta: 0, Media: 1, Baja: 2 };
+
+  // ---------- Utilidades de fechas y texto ----------
+  const pad = n => String(n).padStart(2, '0');
+  const aISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const deISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const hoyISO = () => aISO(new Date());
+  const sumarDias = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const lunesDe = d => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const slug = a => 'amb-' + a.toLowerCase().replace('$', 's');
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fechaCorta = iso => { const d = deISO(iso); return `${DIAS_CORTOS[(d.getDay() + 6) % 7]} ${d.getDate()} ${MESES[d.getMonth()].slice(0, 3)}`; };
+  const terminada = e => e.estado === 'Listo' || e.estado === 'Cancelado';
+
+  const ordenar = lista => [...lista].sort((a, b) =>
+    a.fecha.localeCompare(b.fecha) || (a.hora || '').localeCompare(b.hora || '') || PESO[a.prioridad] - PESO[b.prioridad]);
+
+  function porDia(lista) {
+    const mapa = new Map();
+    for (const e of ordenar(lista)) {
+      if (!mapa.has(e.fecha)) mapa.set(e.fecha, []);
+      mapa.get(e.fecha).push(e);
+    }
+    return mapa;
+  }
+
+  function recordar(clave, valor) {
+    try {
+      if (valor === undefined) return localStorage.getItem('notas.agenda.' + clave);
+      localStorage.setItem('notas.agenda.' + clave, valor);
+    } catch { return null; }
+  }
+
+  // ---------- Estado de la pantalla ----------
+  let raiz, dlg, todas = [];
+  const estado = { vista: recordar('vista') || 'mes', ref: new Date(), dia: hoyISO(), ocultos: new Set() };
+
+  // ---------- Piezas de la pantalla ----------
+  function tarjeta(e, { conFecha = false } = {}) {
+    const hecha = e.estado === 'Listo';
+    const atrasada = !terminada(e) && e.fecha < hoyISO();
+    const meta = [
+      conFecha ? `<span>${fechaCorta(e.fecha)}</span>` : '',
+      e.hora ? `<span>${esc(e.hora)}</span>` : '',
+      `<span>${esc(e.tipo)}</span>`,
+      e.estado === 'En progreso' ? '<span class="etq progreso">En progreso</span>' : '',
+      e.estado === 'Cancelado' ? '<span>Cancelado</span>' : '',
+      e.prioridad === 'Alta' && !terminada(e) ? '<span class="etq alta">Alta</span>' : '',
+      atrasada ? '<span class="etq atrasada">Atrasada</span>' : '',
+    ].join('');
+    return `<div class="tarjeta ${slug(e.ambito)} ${hecha ? 'hecha' : ''} ${e.estado === 'Cancelado' ? 'cancelada' : ''}">
+      <button class="check" data-accion="check" data-id="${e.id}" aria-label="${hecha ? 'Marcar como pendiente' : 'Marcar como hecha'}">${hecha ? '✓' : ''}</button>
+      <button class="tarjeta-cuerpo" data-accion="editar" data-id="${e.id}">
+        <span class="t-nombre">${esc(e.nombre)}</span>
+        <span class="t-meta">${meta}</span>
+      </button>
+    </div>`;
+  }
+
+  function titulo() {
+    if (estado.vista === 'mes') return cap(`${MESES[estado.ref.getMonth()]} ${estado.ref.getFullYear()}`);
+    if (estado.vista === 'semana') {
+      const a = lunesDe(estado.ref), b = sumarDias(a, 6);
+      const mesA = MESES[a.getMonth()].slice(0, 3), mesB = MESES[b.getMonth()].slice(0, 3);
+      return `${a.getDate()} ${mesA === mesB ? '' : mesA + ' '}– ${b.getDate()} ${mesB} ${b.getFullYear()}`;
+    }
+    return 'Por ámbito';
+  }
+
+  function cabecera() {
+    const boton = (v, texto) => `<button class="${estado.vista === v ? 'activo' : ''}" data-accion="vista" data-vista="${v}">${texto}</button>`;
+    const nav = estado.vista === 'tablero' ? '' : `<div class="ag-nav">
+        <button class="btn" data-accion="ant" aria-label="Anterior">‹</button>
+        <button class="btn" data-accion="hoy">Hoy</button>
+        <button class="btn" data-accion="sig" aria-label="Siguiente">›</button>
+      </div>`;
+    return `<header class="ag-cab">
+      <h1>${titulo()}</h1>
+      ${nav}
+      <div class="segmentado">${boton('mes', 'Mes')}${boton('semana', 'Semana')}${boton('tablero', 'Tablero')}</div>
+      <button class="btn primario nueva" data-accion="nueva" aria-label="Nueva entrada"><b>+</b> <span>Nueva</span></button>
+    </header>`;
+  }
+
+  function filtros() {
+    return `<div class="filtros">${AMBITOS.map(a => `<button class="chip ${slug(a)} ${estado.ocultos.has(a) ? 'apagado' : ''}" data-accion="filtro" data-ambito="${esc(a)}"><i></i>${esc(a)}</button>`).join('')}</div>`;
+  }
+
+  function panelDia(iso, items) {
+    const d = deISO(iso);
+    const nombre = cap(`${DIAS_LARGOS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`);
+    return `<section class="panel">
+      <h2>${nombre}</h2>
+      <div class="lista">${items.length ? items.map(e => tarjeta(e)).join('') : '<p class="vacio">Nada este día.</p>'}</div>
+      <button class="anadir" data-accion="nueva" data-fecha="${iso}">+ Añadir este día</button>
+    </section>`;
+  }
+
+  function vistaMes(lista) {
+    const y = estado.ref.getFullYear(), m = estado.ref.getMonth();
+    const inicio = lunesDe(new Date(y, m, 1));
+    const fin = sumarDias(lunesDe(new Date(y, m + 1, 0)), 6);
+    const dias = porDia(lista), hoy = hoyISO();
+    let celdas = '';
+    for (let d = inicio; d <= fin; d = sumarDias(d, 1)) {
+      const iso = aISO(d), items = dias.get(iso) || [];
+      const clases = ['dia', d.getMonth() !== m && 'fuera', iso === hoy && 'hoy', iso === estado.dia && 'sel'].filter(Boolean).join(' ');
+      const pildoras = items.slice(0, 3).map(e => `<span class="pildora ${slug(e.ambito)} ${terminada(e) ? 'hecha' : ''}">${esc(e.nombre)}</span>`).join('');
+      const mas = items.length > 3 ? `<span class="mas">+${items.length - 3} más</span>` : '';
+      celdas += `<button class="${clases}" data-accion="dia" data-fecha="${iso}"><span class="num">${d.getDate()}</span><span class="pildoras">${pildoras}${mas}</span></button>`;
+    }
+    return `<div class="mes-layout">
+      <div class="mes">
+        <div class="mes-cab">${DIAS_CORTOS.map(d => `<span>${d}</span>`).join('')}</div>
+        <div class="mes-grid">${celdas}</div>
+      </div>
+      ${panelDia(estado.dia, dias.get(estado.dia) || [])}
+    </div>`;
+  }
+
+  function vistaSemana(lista) {
+    const lunes = lunesDe(estado.ref), dias = porDia(lista), hoy = hoyISO();
+    let html = '';
+    for (let i = 0; i < 7; i++) {
+      const d = sumarDias(lunes, i), iso = aISO(d), items = dias.get(iso) || [];
+      html += `<section class="sem-dia ${iso === hoy ? 'hoy' : ''}">
+        <header><span>${DIAS_CORTOS[i]}</span><b>${d.getDate()}</b></header>
+        ${items.map(e => tarjeta(e)).join('')}
+        <button class="anadir" data-accion="nueva" data-fecha="${iso}">+ Añadir</button>
+      </section>`;
+    }
+    return `<div class="semana">${html}</div>`;
+  }
+
+  function vistaTablero(lista) {
+    const columnas = AMBITOS.filter(a => !estado.ocultos.has(a)).map(a => {
+      const items = ordenar(lista.filter(e => e.ambito === a && !terminada(e)));
+      return `<section class="columna ${slug(a)}">
+        <h3><i></i>${esc(a)} <span class="cuenta">${items.length}</span></h3>
+        <div class="lista">${items.length ? items.map(e => tarjeta(e, { conFecha: true })).join('') : '<p class="vacio">Nada pendiente.</p>'}</div>
+        <button class="anadir" data-accion="nueva" data-ambito="${esc(a)}">+ Añadir</button>
+      </section>`;
+    });
+    return `<div class="tablero">${columnas.join('')}</div>`;
+  }
+
+  async function render() {
+    try {
+      todas = await Datos.agenda.listar();
+    } catch {
+      avisar('No se ha podido cargar la agenda. Revisa la conexión.');
+    }
+    const visibles = todas.filter(e => !estado.ocultos.has(e.ambito));
+    const cuerpo = { mes: vistaMes, semana: vistaSemana, tablero: vistaTablero }[estado.vista] || vistaMes;
+    raiz.innerHTML = cabecera() + filtros() + cuerpo(visibles);
+  }
+
+  // ---------- Formulario de crear / editar ----------
+  function abrirFormulario(e) {
+    const nueva = !e.id;
+    const opciones = (lista, actual) => lista.map(v => `<option${v === actual ? ' selected' : ''}>${esc(v)}</option>`).join('');
+    const ambito = e.ambito || 'Personal';
+    dlg.innerHTML = `<form class="formulario">
+      <h2>${nueva ? 'Nueva entrada' : 'Editar entrada'}</h2>
+      <label>Nombre<input name="nombre" required autocomplete="off"></label>
+      <div class="fila">
+        <label>Fecha<input type="date" name="fecha" required></label>
+        <label>Hora <small>(opcional)</small><input type="time" name="hora"></label>
+      </div>
+      <fieldset><legend>Ámbito</legend>
+        <div class="chips-sel">${AMBITOS.map(a => `<label class="chip ${slug(a)}"><input type="radio" name="ambito" value="${esc(a)}"${a === ambito ? ' checked' : ''}><i></i>${esc(a)}</label>`).join('')}</div>
+      </fieldset>
+      <div class="fila">
+        <label>Tipo<select name="tipo">${opciones(TIPOS, e.tipo || 'Tarea')}</select></label>
+        <label>Prioridad<select name="prioridad">${opciones(PRIORIDADES, e.prioridad || 'Media')}</select></label>
+      </div>
+      <label>Estado<select name="estado">${opciones(ESTADOS, e.estado || 'Sin empezar')}</select></label>
+      <label>Notas<textarea name="notas" rows="3"></textarea></label>
+      <div class="acciones">
+        ${nueva ? '' : '<button type="button" class="btn peligro" data-f="borrar">Borrar</button>'}
+        <span class="hueco"></span>
+        <button type="button" class="btn" data-f="cancelar">Cancelar</button>
+        <button type="submit" class="btn primario">Guardar</button>
+      </div>
+    </form>`;
+
+    const f = dlg.querySelector('form');
+    f.elements.nombre.value = e.nombre || '';
+    f.elements.fecha.value = e.fecha || hoyISO();
+    f.elements.hora.value = e.hora || '';
+    f.elements.notas.value = e.notas || '';
+
+    f.onsubmit = async ev => {
+      ev.preventDefault();
+      const datos = Object.fromEntries(new FormData(f));
+      datos.nombre = datos.nombre.trim();
+      if (!datos.nombre) return;
+      try {
+        if (nueva) await Datos.agenda.crear(datos);
+        else await Datos.agenda.actualizar(e.id, datos);
+      } catch {
+        return avisar('No se ha podido guardar. Revisa la conexión y vuelve a probar.');
+      }
+      estado.dia = datos.fecha;
+      dlg.close();
+      render();
+    };
+    f.querySelector('[data-f=cancelar]').onclick = () => dlg.close();
+    const borrar = f.querySelector('[data-f=borrar]');
+    if (borrar) borrar.onclick = async () => {
+      if (!confirm(`¿Borrar «${e.nombre}»?`)) return;
+      try {
+        await Datos.agenda.borrar(e.id);
+      } catch {
+        return avisar('No se ha podido borrar. Revisa la conexión.');
+      }
+      dlg.close();
+      render();
+    };
+
+    dlg.showModal();
+    if (nueva) f.elements.nombre.focus();
+  }
+
+  // ---------- Qué pasa al pulsar ----------
+  function mover(paso) {
+    const r = estado.ref;
+    estado.ref = estado.vista === 'mes' ? new Date(r.getFullYear(), r.getMonth() + paso, 1) : sumarDias(r, 7 * paso);
+  }
+
+  async function alPulsar(ev) {
+    const b = ev.target.closest('[data-accion]');
+    if (!b || !raiz.contains(b)) return;
+    const { accion, id, fecha, vista, ambito } = b.dataset;
+    switch (accion) {
+      case 'vista': estado.vista = vista; recordar('vista', vista); break;
+      case 'ant': mover(-1); break;
+      case 'sig': mover(1); break;
+      case 'hoy': estado.ref = new Date(); estado.dia = hoyISO(); break;
+      case 'dia':
+        estado.dia = fecha;
+        if (deISO(fecha).getMonth() !== estado.ref.getMonth()) estado.ref = deISO(fecha);
+        break;
+      case 'filtro':
+        if (estado.ocultos.has(ambito)) estado.ocultos.delete(ambito); else estado.ocultos.add(ambito);
+        break;
+      case 'check': {
+        const e = todas.find(x => x.id === id);
+        try {
+          await Datos.agenda.actualizar(id, { estado: e.estado === 'Listo' ? 'Sin empezar' : 'Listo' });
+        } catch {
+          return avisar('No se ha podido guardar. Revisa la conexión.');
+        }
+        break;
+      }
+      case 'editar': return abrirFormulario(todas.find(x => x.id === id));
+      case 'nueva': return abrirFormulario({ fecha: fecha || (estado.vista === 'mes' ? estado.dia : hoyISO()), ambito });
+      default: return;
+    }
+    render();
+  }
+
+  function montar(contenedor) {
+    raiz = contenedor;
+    dlg = document.getElementById('dialogo');
+    raiz.onclick = alPulsar;
+    dlg.onclick = ev => { if (ev.target === dlg) dlg.close(); };
+    render();
+  }
+
+  // Vuelve a leer los datos (al volver a la app, por si cambiaste algo en otro aparato)
+  function refrescar() { if (raiz && !dlg.open) render(); }
+
+  return { montar, refrescar };
+})();
