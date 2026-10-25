@@ -301,6 +301,45 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
 .md hr { border: 0; border-top: 1px solid var(--linea); margin: 1.4em 0; }
 .md a { color: var(--acento); }
 
+/* ---------- Finanzas ---------- */
+.fin-tarjetas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.fin-tarjetas .panel { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.panel h2 small { font-weight: 400; color: var(--suave); font-size: 13px; margin-left: 4px; }
+.fin-cifra { margin: 0; color: var(--suave); }
+.fin-cifra b { font-size: 26px; color: var(--texto); margin-right: 4px; }
+.fin-barra { width: 100%; height: 10px; border-radius: 999px; background: var(--hover); overflow: hidden; }
+.fin-barra span { display: block; height: 100%; border-radius: 999px; background: var(--verde); transition: width .3s; }
+.fin-barra.cerca span { background: var(--amarillo); }
+.fin-barra.pasado span { background: var(--peligro); }
+.fin-resto { margin: 0; font-size: 14px; color: var(--suave); }
+.fin-resto.pasado { color: var(--peligro); font-weight: 600; }
+.fin-plan h2 { margin: 0; }
+.fin-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.fin-nav b { min-width: 120px; text-align: center; }
+.fin-columnas { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+.fin-columnas .panel > .fin-barra, .fin-columnas .panel > .fin-resto { margin-bottom: 8px; }
+.fin-cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.fin-cats span { font-size: 12px; background: var(--hover); border-radius: 999px; padding: 2px 8px; }
+.fin-fila {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 10px; border-radius: 8px; background: var(--fondo);
+}
+.fin-fila:hover { background: var(--hover); }
+.fin-fila-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.fin-fila-txt b { font-weight: 500; overflow-wrap: anywhere; }
+.fin-fila-txt small { color: var(--suave); font-size: 12px; }
+.fin-importe { font-weight: 600; white-space: nowrap; }
+.fin-historial { display: flex; flex-direction: column; gap: 2px; }
+.fin-semana { display: grid; grid-template-columns: 1fr 80px 70px; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 6px; text-align: left; font-size: 14px; }
+.fin-semana:hover, .fin-semana.activa { background: var(--hover); }
+.fin-semana b { text-align: right; font-weight: 500; }
+.fin-mini { height: 6px; border-radius: 999px; background: var(--hover); overflow: hidden; }
+.fin-semana.activa .fin-mini { background: var(--panel); }
+.fin-mini i { display: block; height: 100%; background: var(--verde); }
+.fin-mini.pasado i { background: var(--peligro); }
+.fin-horas { max-width: 640px; }
+.fin-horas .fin-cifra { margin-bottom: 10px; }
+
 /* ---------- Formulario ---------- */
 dialog {
   border: 0; border-radius: 14px; padding: 0;
@@ -357,6 +396,9 @@ legend { font-size: 13px; color: var(--suave); margin-bottom: 6px; padding: 0; }
   .pag-cab { padding-right: 48px; }
   .pag-titulo { font-size: 24px; }
   .bandeja-nueva .btn { padding: 7px 10px; }
+  .fin-tarjetas, .fin-columnas { grid-template-columns: 1fr; }
+  .fin-nav b { min-width: 0; flex: 1; }
+  .fin-nav .hueco { display: none; }
   .sector .icono svg { width: 22px; height: 22px; }
   .tema {
     position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 12px; z-index: 11;
