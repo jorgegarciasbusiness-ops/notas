@@ -45,10 +45,13 @@ function avisar(texto) {
       const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
       const { v } = await r.json();
       if (!v || typeof VERSION === 'undefined' || v === VERSION) return;
-      // Un solo intento por versión, para no entrar en bucle si internet aún sirve la vieja
-      if (sessionStorage.getItem('notas.intentoVersion') === v) return;
-      sessionStorage.setItem('notas.intentoVersion', v);
-      location.replace(`./?v=${encodeURIComponent(v)}`);
+      // Hasta 3 intentos por versión, para no entrar en bucle si internet aún sirve la vieja
+      const clave = `notas.intentos.${v}`;
+      const intentos = Number(sessionStorage.getItem(clave) || 0);
+      if (intentos >= 3) return;
+      sessionStorage.setItem(clave, intentos + 1);
+      // La hora en la dirección hace que sea siempre nueva y nadie entregue una copia guardada
+      location.replace(`./?v=${encodeURIComponent(v)}&t=${Date.now()}`);
     } catch { /* sin conexión o en modo prueba: se queda como está */ }
   }
   comprobarVersion();
