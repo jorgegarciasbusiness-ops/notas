@@ -51,8 +51,9 @@ const Finanzas = (() => {
   }
 
   function filaGasto(g) {
+    const previsto = g.fecha > hoyISO() ? ' · <span class="fin-previsto">Previsto</span>' : '';
     return `<button class="fin-fila" data-accion="editar-gasto" data-id="${g.id}">
-      <span class="fin-fila-txt"><b>${esc(g.concepto || g.categoria)}</b><small>${diaCorto(g.fecha)} · ${esc(g.categoria)}</small></span>
+      <span class="fin-fila-txt"><b>${esc(g.concepto || g.categoria)}</b><small>${diaCorto(g.fecha)} · ${esc(g.categoria)}${previsto}</small></span>
       <span class="fin-importe">${euros(g.importe)}</span>
     </button>`;
   }
@@ -74,10 +75,13 @@ const Finanzas = (() => {
     const mes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const turnos = delMes(mes);
     const plan = planPagina();
+    const siguiente = sumarDias(lunes, 7);
+    const previsto = suma(deLaSemana(siguiente), 'importe');
     return `<div class="fin-tarjetas">
         <section class="panel">
           <h2>Esta semana <small>${semana(lunes).texto}</small></h2>
           ${barra(suma(deLaSemana(lunes), 'importe'))}
+          ${previsto ? `<button class="fin-enlace" data-accion="ir-semana" data-fecha="${aISO(siguiente)}">Semana que viene: ${euros(previsto)} ya previstos ›</button>` : ''}
           <button class="btn primario" data-accion="nuevo-gasto">+ Gasto</button>
         </section>
         <section class="panel">
@@ -95,13 +99,14 @@ const Finanzas = (() => {
   function vistaGastos() {
     const s = semana(estado.lunes);
     const lista = deLaSemana(estado.lunes).sort((a, b) => b.fecha.localeCompare(a.fecha));
-    // Últimas 8 semanas, para ver en qué se va el dinero
+    // Semanas que vienen con gastos ya previstos (hasta 8), y las últimas 8, para ver en qué se va el dinero
     const historial = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = -8; i < 8; i++) {
       const l = sumarDias(lunesDe(new Date()), -7 * i);
       const total = suma(deLaSemana(l), 'importe');
+      if (i < 0 && !total) continue;
       historial.push(`<button class="fin-semana ${aISO(l) === aISO(estado.lunes) ? 'activa' : ''}" data-accion="ir-semana" data-fecha="${aISO(l)}">
-        <span>${semana(l).texto}</span>
+        <span>${semana(l).texto}${i < 0 ? ' <small class="fin-previsto">Prevista</small>' : i === 0 ? ' <small>Esta</small>' : ''}</span>
         <span class="fin-mini ${total > LIMITE_SEMANA ? 'pasado' : ''}"><i style="width:${Math.min(100, total / LIMITE_SEMANA * 100)}%"></i></span>
         <b>${euros(total)}</b>
       </button>`);
@@ -121,7 +126,7 @@ const Finanzas = (() => {
           <div class="lista">${lista.length ? lista.map(filaGasto).join('') : '<p class="vacio">Sin gastos esta semana.</p>'}</div>
         </section>
         <section class="panel">
-          <h2>Últimas semanas</h2>
+          <h2>Semanas</h2>
           <div class="fin-historial">${historial.join('')}</div>
         </section>
       </div>`;
@@ -184,6 +189,10 @@ const Finanzas = (() => {
       } catch {
         return avisar('No se ha podido guardar. Revisa la conexión y vuelve a probar.');
       }
+      // Lleva a la semana (o al mes) de lo que acabas de apuntar, aunque sea en el futuro
+      const d = deISO(datos.fecha);
+      if (tabla === 'gastos') Object.assign(estado, { vista: 'gastos', lunes: lunesDe(d) });
+      else Object.assign(estado, { vista: 'horas', mes: new Date(d.getFullYear(), d.getMonth(), 1) });
       dlg.close();
       render();
     };
@@ -264,7 +273,7 @@ const Finanzas = (() => {
       case 'editar-turno': return abrirTurno(horas.find(t => t.id === id));
       case 'semana-ant': estado.lunes = sumarDias(estado.lunes, -7); break;
       case 'semana-sig': estado.lunes = sumarDias(estado.lunes, 7); break;
-      case 'ir-semana': estado.lunes = deISO(fecha); break;
+      case 'ir-semana': Object.assign(estado, { vista: 'gastos', lunes: deISO(fecha) }); break;
       case 'mes-ant': estado.mes = new Date(estado.mes.getFullYear(), estado.mes.getMonth() - 1, 1); break;
       case 'mes-sig': estado.mes = new Date(estado.mes.getFullYear(), estado.mes.getMonth() + 1, 1); break;
       case 'ver-plan': Paginas.elegir(id); document.querySelector('.sector[data-sector="paginas"]').click(); return;
