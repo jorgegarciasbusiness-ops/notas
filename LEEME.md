@@ -29,7 +29,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Fin
 
 ### Finanzas
 - **Resumen**: lo gastado esta semana contra el límite de 50 € (barra verde, amarilla al acercarte y roja si te pasas), las horas trabajadas del mes y tu **Plan de finanzas** (se edita en Páginas).
-- **Gastos**: apunta cada gasto (importe, concepto, categoría y fecha) o el total de la semana. Se suman por semana, de lunes a domingo. Abajo, las últimas 8 semanas y en qué categorías se fue el dinero.
+- **Gastos**: apunta cada gasto (importe, concepto, categoría y fecha) o el total de la semana. Se suman por semana, de lunes a domingo. Se pueden apuntar **por adelantado** (con fecha futura): salen como "Previsto" y cuentan en su semana. Al guardar, la app te lleva a la semana del gasto. A la derecha, las semanas con gastos previstos y las últimas 8. El Resumen avisa si la semana que viene ya tiene gastos previstos.
 - **Horas**: cada turno con entrada y salida; las horas se calculan solas. Total del mes, para el parte del catering.
 
 ### Aspecto
