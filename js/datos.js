@@ -17,6 +17,9 @@ const Datos = (() => {
     paginas: { orden: 'titulo', actualizado: true },
     gastos: { orden: 'fecha', actualizado: true },
     horas: { orden: 'fecha', actualizado: true },
+    ahorros: { orden: 'fecha', actualizado: true },
+    nominas: { orden: 'mes', actualizado: true },
+    nomina_partidas: { orden: 'creado', actualizado: true },
   };
   // Horas tipo "08:00" o vacío; en la nube vacío es "nada"
   const hhmm = h => (h ? String(h).slice(0, 5) : '');
@@ -35,7 +38,7 @@ const Datos = (() => {
       // No ha cargado la pieza de Supabase (sin internet): se pide entrar y avisa del fallo
       const sinConexion = async () => { throw new Error('sin conexión'); };
       const vacia = { listar: sinConexion, crear: sinConexion, actualizar: sinConexion, borrar: sinConexion };
-      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
+      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, ahorros: vacia, nominas: vacia, nomina_partidas: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
     }
     const sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseClave);
     const comprobar = ({ data, error }) => { if (error) throw error; return data; };
@@ -79,6 +82,9 @@ const Datos = (() => {
         limpiar: f => ({ ...f, entrada: hhmm(f.entrada), salida: hhmm(f.salida), horas: Number(f.horas) }),
         preparar: d => horaONada(d, ['entrada', 'salida']),
       }),
+      ahorros: tabla('ahorros', { limpiar: f => ({ ...f, importe: Number(f.importe) }) }),
+      nominas: tabla('nominas', { limpiar: f => ({ ...f, neto: Number(f.neto) }) }),
+      nomina_partidas: tabla('nomina_partidas', { limpiar: f => ({ ...f, importe: Number(f.importe) }) }),
       async sesion() { const { data } = await sb.auth.getSession(); return data.session; },
       async entrar(email, clave) {
         const { error } = await sb.auth.signInWithPassword({ email, password: clave });
@@ -130,6 +136,11 @@ const Datos = (() => {
       horas: () => [
         [-6, '08:00', '14:00', 6], [-4, '07:00', '15:00', 8], [-1, '10:00', '15:00', 5],
       ].map(([n, entrada, salida, horas]) => ({ id: nuevoId(), fecha: dia(n), entrada, salida, horas, trabajo: 'Catering (Interim)', nota: '', creado: ahora(), actualizado: ahora() })),
+      ahorros: () => [
+        [-40, 70, 'Primer ingreso'], [-10, 500, 'Nómina'],
+      ].map(([n, importe, nota]) => ({ id: nuevoId(), fecha: dia(n), importe, nota, creado: ahora(), actualizado: ahora() })),
+      nominas: () => [],
+      nomina_partidas: () => [],
     };
 
     function tabla(nombre) {
@@ -172,6 +183,9 @@ const Datos = (() => {
       paginas: tabla('paginas'),
       gastos: tabla('gastos'),
       horas: tabla('horas'),
+      ahorros: tabla('ahorros'),
+      nominas: tabla('nominas'),
+      nomina_partidas: tabla('nomina_partidas'),
       async sesion() { return { local: true }; },
       async entrar() {},
       async salir() {},

@@ -1,6 +1,9 @@
-/* Sector Finanzas: resumen, gasto semanal contra el límite y horas trabajadas por mes */
+/* Sector Finanzas: gasto semanal contra el límite, horas por mes, ahorro con su objetivo y reparto de la nómina */
 const Finanzas = (() => {
   const LIMITE_SEMANA = 50;  // € por semana (plan de finanzas, 2026-10-19)
+  const OBJETIVO_AHORRO = 10000;  // € (petición de Koke, 2026-10-25)
+  const PARTIDAS = ['Ahorro', 'Gastos fijos', 'Gastos variables', 'Libre'];
+  const COLORES = ['var(--verde)', 'var(--azul)', 'var(--naranja)', 'var(--morado)', 'var(--rosa)', 'var(--amarillo)', 'var(--gris)'];
   const CATEGORIAS = ['Comida', 'Ocio', 'Ropa', 'Transporte', 'Música', 'Salud', 'Otros'];
   const TRABAJOS = ['Catering (Interim)', 'Hipódromo', 'Led&Go'];
   const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -37,8 +40,9 @@ const Finanzas = (() => {
   }
 
   // ---------- Estado ----------
-  let raiz, dlg, gastos = [], horas = [], paginas = [];
-  const estado = { vista: 'resumen', lunes: lunesDe(new Date()), mes: new Date(new Date().getFullYear(), new Date().getMonth(), 1) };
+  let raiz, dlg, gastos = [], horas = [], paginas = [], ahorros = [], nominas = [], partidas = [];
+  const mesActual = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const estado = { vista: 'resumen', lunes: lunesDe(new Date()), mes: mesActual(), mesNomina: mesActual() };
 
   // ---------- Piezas ----------
   function barra(gastado) {
@@ -147,16 +151,94 @@ const Finanzas = (() => {
       </section>`;
   }
 
+  // ---------- Ahorro y nómina ----------
+  const isoMes = d => aISO(new Date(d.getFullYear(), d.getMonth(), 1));
+  const nombreMes = d => `${MESES[d.getMonth()]} ${d.getFullYear()}`;
+  const nominaDe = mes => nominas.find(n => n.mes === isoMes(mes));
+  const partidasDe = mes => partidas.filter(p => p.mes === isoMes(mes));
+  const mesAnterior = mes => new Date(mes.getFullYear(), mes.getMonth() - 1, 1);
+
+  function anillo(total) {
+    const pct = Math.max(0, Math.min(1, total / OBJETIVO_AHORRO));
+    const r = 52, c = 2 * Math.PI * r;
+    return `<svg class="fin-anillo" viewBox="0 0 120 120" role="img" aria-label="${Math.round(pct * 100)} % del objetivo">
+      <circle cx="60" cy="60" r="${r}" class="fondo"/>
+      <circle cx="60" cy="60" r="${r}" class="valor" stroke-dasharray="${(c * pct).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 60 60)"/>
+      <text x="60" y="62" text-anchor="middle" class="pct">${Math.floor(pct * 100)} %</text>
+      <text x="60" y="80" text-anchor="middle" class="sub">del objetivo</text>
+    </svg>`;
+  }
+
+  function vistaAhorro() {
+    const total = suma(ahorros, 'importe');
+    const faltan = OBJETIVO_AHORRO - total;
+    const lista = [...ahorros].sort((a, b) => b.fecha.localeCompare(a.fecha));
+    const fila = a => `<button class="fin-fila" data-accion="editar-ahorro" data-id="${a.id}">
+        <span class="fin-fila-txt"><b>${esc(a.nota || 'Ingreso')}</b><small>${diaCorto(a.fecha)}</small></span>
+        <span class="fin-importe">${euros(a.importe)}</span>
+      </button>`;
+
+    const mes = estado.mesNomina, nomina = nominaDe(mes), ps = partidasDe(mes);
+    let reparto;
+    if (nomina) {
+      const asignado = suma(ps, 'importe');
+      const libre = nomina.neto - asignado;
+      const ancho = x => (nomina.neto > 0 ? Math.max(0, x / Math.max(nomina.neto, asignado) * 100) : 0);
+      reparto = `<button class="fin-enlace fin-neto" data-accion="editar-nomina"><b>${euros(nomina.neto)}</b> netos</button>
+        <div class="fin-reparto">${ps.map((p, i) => `<span style="width:${ancho(p.importe)}%;background:${COLORES[i % COLORES.length]}" title="${esc(p.concepto)}"></span>`).join('')}</div>
+        <div class="lista">${ps.map((p, i) => `<button class="fin-fila" data-accion="editar-partida" data-id="${p.id}">
+            <i class="fin-punto" style="background:${COLORES[i % COLORES.length]}"></i>
+            <span class="fin-fila-txt"><b>${esc(p.concepto)}</b><small>${nomina.neto ? Math.round(p.importe / nomina.neto * 100) : 0} %</small></span>
+            <span class="fin-importe">${euros(p.importe)}</span>
+          </button>`).join('') || '<p class="vacio">Aún no has repartido la nómina.</p>'}</div>
+        ${libre !== 0 ? `<p class="fin-resto ${libre < 0 ? 'pasado' : ''}">${libre > 0 ? `Sin repartir: ${euros(libre)}` : `Repartes ${euros(-libre)} más de lo que cobras`}</p>` : ''}
+        <button class="btn primario" data-accion="nueva-partida">+ Partida</button>`;
+    } else {
+      const anterior = nominaDe(mesAnterior(mes));
+      reparto = `<p class="vacio">Sin nómina apuntada en ${nombreMes(mes)}.</p>
+        <div class="fin-botones">
+          <button class="btn primario" data-accion="nueva-nomina">Apuntar nómina</button>
+          ${anterior ? `<button class="btn" data-accion="copiar-nomina">Copiar el reparto de ${MESES[mesAnterior(mes).getMonth()]}</button>` : ''}
+        </div>`;
+    }
+
+    return `<div class="fin-columnas">
+        <section class="panel fin-ahorro">
+          <h2>Hucha</h2>
+          <div class="fin-ahorro-cab">
+            ${anillo(total)}
+            <div>
+              <p class="fin-cifra"><b>${euros(total)}</b> de ${euros(OBJETIVO_AHORRO)}</p>
+              <p class="fin-resto">${faltan > 0 ? `Faltan ${euros(faltan)}` : '¡Objetivo cumplido!'}</p>
+              <button class="btn primario" data-accion="nuevo-ahorro">+ Ingreso</button>
+            </div>
+          </div>
+          <div class="lista">${lista.length ? lista.map(fila).join('') : '<p class="vacio">Aún no has apuntado ningún ingreso.</p>'}</div>
+        </section>
+        <section class="panel">
+          <div class="fin-nav">
+            <button class="btn" data-accion="nomina-ant" aria-label="Mes anterior">‹</button>
+            <b>Nómina de ${nombreMes(mes)}</b>
+            <button class="btn" data-accion="nomina-sig" aria-label="Mes siguiente">›</button>
+          </div>
+          ${reparto}
+        </section>
+      </div>`;
+  }
+
   async function render() {
     try {
-      [gastos, horas, paginas] = await Promise.all([Datos.gastos.listar(), Datos.horas.listar(), Datos.paginas.listar()]);
+      [gastos, horas, paginas, ahorros, nominas, partidas] = await Promise.all([
+        Datos.gastos.listar(), Datos.horas.listar(), Datos.paginas.listar(),
+        Datos.ahorros.listar(), Datos.nominas.listar(), Datos.nomina_partidas.listar(),
+      ]);
     } catch {
       avisar('No se han podido cargar las finanzas. Revisa la conexión.');
     }
     const boton = (v, t) => `<button class="${estado.vista === v ? 'activo' : ''}" data-accion="vista" data-vista="${v}">${t}</button>`;
-    const cuerpo = { resumen: vistaResumen, gastos: vistaGastos, horas: vistaHoras }[estado.vista]();
+    const cuerpo = { resumen: vistaResumen, gastos: vistaGastos, horas: vistaHoras, ahorro: vistaAhorro }[estado.vista]();
     raiz.innerHTML = `<header class="ag-cab"><h1>Finanzas</h1>
-        <div class="segmentado">${boton('gastos', 'Gastos')}${boton('horas', 'Horas')}${boton('resumen', 'Resumen')}</div>
+        <div class="segmentado">${boton('gastos', 'Gastos')}${boton('horas', 'Horas')}${boton('ahorro', 'Ahorro')}${boton('resumen', 'Resumen')}</div>
       </header>${cuerpo}`;
   }
 
@@ -178,7 +260,7 @@ const Finanzas = (() => {
     return f;
   }
 
-  function preparar(f, tabla, fila, leer, nombre) {
+  function preparar(f, tabla, fila, leer, nombre, borrarTodo = () => Datos[tabla].borrar(fila.id)) {
     f.onsubmit = async ev => {
       ev.preventDefault();
       const datos = leer(f);
@@ -190,9 +272,8 @@ const Finanzas = (() => {
         return avisar('No se ha podido guardar. Revisa la conexión y vuelve a probar.');
       }
       // Lleva a la semana (o al mes) de lo que acabas de apuntar, aunque sea en el futuro
-      const d = deISO(datos.fecha);
-      if (tabla === 'gastos') Object.assign(estado, { vista: 'gastos', lunes: lunesDe(d) });
-      else Object.assign(estado, { vista: 'horas', mes: new Date(d.getFullYear(), d.getMonth(), 1) });
+      if (tabla === 'gastos') Object.assign(estado, { vista: 'gastos', lunes: lunesDe(deISO(datos.fecha)) });
+      if (tabla === 'horas') { const d = deISO(datos.fecha); Object.assign(estado, { vista: 'horas', mes: new Date(d.getFullYear(), d.getMonth(), 1) }); }
       dlg.close();
       render();
     };
@@ -200,7 +281,7 @@ const Finanzas = (() => {
     if (borrar) borrar.onclick = async () => {
       if (!confirm(`¿Borrar ${nombre}?`)) return;
       try {
-        await Datos[tabla].borrar(fila.id);
+        await borrarTodo();
       } catch {
         return avisar('No se ha podido borrar. Revisa la conexión.');
       }
@@ -260,6 +341,71 @@ const Finanzas = (() => {
     }, `el turno del ${diaCorto(t.fecha || hoyISO())}`);
   }
 
+  function abrirAhorro(a = {}) {
+    const f = formulario(a.id ? 'Editar ingreso' : 'Ingreso al ahorro', `
+      <div class="fila">
+        <label>Importe (€)<input name="importe" type="number" inputmode="decimal" step="0.01" required></label>
+        <label>Fecha<input name="fecha" type="date" required></label>
+      </div>
+      <label>Nota <small>(opcional)</small><input name="nota" autocomplete="off" placeholder="Ej.: nómina de noviembre"></label>
+      <p class="ayuda">Si sacas dinero de la hucha, pon el importe en negativo.</p>`, !!a.id);
+    f.elements.importe.value = a.importe ?? '';
+    f.elements.fecha.value = a.fecha || hoyISO();
+    f.elements.nota.value = a.nota || '';
+    preparar(f, 'ahorros', a, form => {
+      const importe = Number(String(form.elements.importe.value).replace(',', '.'));
+      if (!importe) return null;
+      return { importe, fecha: form.elements.fecha.value, nota: form.elements.nota.value.trim() };
+    }, `el ingreso de ${euros(a.importe)}`);
+    if (!a.id) f.elements.importe.focus();
+  }
+
+  function abrirNomina() {
+    const mes = estado.mesNomina, n = nominaDe(mes) || {};
+    const f = formulario(`Nómina de ${nombreMes(mes)}`, `
+      <label>Lo que cobras (neto, €)<input name="neto" type="number" inputmode="decimal" step="0.01" min="0" required></label>`, !!n.id);
+    f.elements.neto.value = n.neto ?? '';
+    preparar(f, 'nominas', n, form => {
+      const neto = Number(String(form.elements.neto.value).replace(',', '.'));
+      if (!(neto >= 0)) return null;
+      return { mes: isoMes(mes), neto };
+    }, `la nómina de ${nombreMes(mes)} y su reparto`, async () => {
+      for (const p of partidasDe(mes)) await Datos.nomina_partidas.borrar(p.id);
+      await Datos.nominas.borrar(n.id);
+    });
+    f.elements.neto.focus();
+  }
+
+  function abrirPartida(p = {}) {
+    const mes = estado.mesNomina;
+    const f = formulario(p.id ? 'Editar partida' : 'Nueva partida', `
+      <label>A dónde va<input name="concepto" list="lista-partidas" autocomplete="off" required placeholder="Ej.: Ahorro"></label>
+      <datalist id="lista-partidas">${[...new Set([...PARTIDAS, ...partidas.map(x => x.concepto)])].map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+      <label>Importe (€)<input name="importe" type="number" inputmode="decimal" step="0.01" min="0" required></label>`, !!p.id);
+    f.elements.concepto.value = p.concepto || '';
+    f.elements.importe.value = p.importe ?? '';
+    preparar(f, 'nomina_partidas', p, form => {
+      const importe = Number(String(form.elements.importe.value).replace(',', '.'));
+      const concepto = form.elements.concepto.value.trim();
+      if (!concepto || !(importe >= 0)) return null;
+      return { mes: isoMes(mes), concepto, importe };
+    }, `la partida «${p.concepto}»`);
+    if (!p.id) f.elements.concepto.focus();
+  }
+
+  // Copia la nómina y el reparto del mes anterior (luego se retoca lo que cambie)
+  async function copiarNomina() {
+    const mes = estado.mesNomina, antes = mesAnterior(mes), n = nominaDe(antes);
+    if (!n) return;
+    try {
+      await Datos.nominas.crear({ mes: isoMes(mes), neto: n.neto });
+      for (const p of partidasDe(antes)) await Datos.nomina_partidas.crear({ mes: isoMes(mes), concepto: p.concepto, importe: p.importe });
+    } catch {
+      avisar('No se ha podido copiar. Revisa la conexión.');
+    }
+    render();
+  }
+
   // ---------- Qué pasa al pulsar ----------
   function alPulsar(ev) {
     const b = ev.target.closest('[data-accion]');
@@ -276,6 +422,14 @@ const Finanzas = (() => {
       case 'ir-semana': Object.assign(estado, { vista: 'gastos', lunes: deISO(fecha) }); break;
       case 'mes-ant': estado.mes = new Date(estado.mes.getFullYear(), estado.mes.getMonth() - 1, 1); break;
       case 'mes-sig': estado.mes = new Date(estado.mes.getFullYear(), estado.mes.getMonth() + 1, 1); break;
+      case 'nuevo-ahorro': return abrirAhorro();
+      case 'editar-ahorro': return abrirAhorro(ahorros.find(a => a.id === id));
+      case 'nueva-nomina': case 'editar-nomina': return abrirNomina();
+      case 'nueva-partida': return abrirPartida();
+      case 'editar-partida': return abrirPartida(partidas.find(p => p.id === id));
+      case 'copiar-nomina': return copiarNomina();
+      case 'nomina-ant': estado.mesNomina = mesAnterior(estado.mesNomina); break;
+      case 'nomina-sig': estado.mesNomina = new Date(estado.mesNomina.getFullYear(), estado.mesNomina.getMonth() + 1, 1); break;
       case 'ver-plan': Paginas.elegir(id); document.querySelector('.sector[data-sector="paginas"]').click(); return;
       default: return;
     }
