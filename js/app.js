@@ -39,9 +39,25 @@ function avisar(texto) {
     if (b && !b.disabled && sectores[b.dataset.sector]) abrir(b.dataset.sector);
   });
 
+  // Si hay una versión nueva publicada, se carga sola (el iPhone guarda la vieja un rato si no)
+  async function comprobarVersion() {
+    try {
+      const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+      const { v } = await r.json();
+      if (!v || typeof VERSION === 'undefined' || v === VERSION) return;
+      // Un solo intento por versión, para no entrar en bucle si internet aún sirve la vieja
+      if (sessionStorage.getItem('notas.intentoVersion') === v) return;
+      sessionStorage.setItem('notas.intentoVersion', v);
+      location.replace(`./?v=${encodeURIComponent(v)}`);
+    } catch { /* sin conexión o en modo prueba: se queda como está */ }
+  }
+  comprobarVersion();
+
   // Al volver a la app (por ejemplo, desde otra en el iPhone), recarga por si cambiaste algo en el PC
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && actual) sectores[actual].refrescar?.();
+    if (document.hidden) return;
+    comprobarVersion();
+    if (actual) sectores[actual].refrescar?.();
   });
 
   // ---------- Modo claro / oscuro: sigue al sistema hasta que lo cambias con el botón ----------
