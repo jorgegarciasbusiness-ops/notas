@@ -358,6 +358,17 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
 .fin-punto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .fin-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .panel > .btn { margin-top: 10px; }
+.fin-pila { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.fin-objetivo {
+  display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: 8px; background: var(--fondo);
+}
+.fin-objetivo:hover { background: var(--hover); }
+.fin-objetivo-cab { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.fin-objetivo-cab span { color: var(--suave); font-size: 14px; }
+.fin-objetivo small { color: var(--suave); font-size: 12px; }
+.fin-objetivo .fin-barra { height: 8px; }
+.fin-conseguido { color: var(--verde); font-weight: 700; }
 .fin-horas .fin-cifra { margin-bottom: 10px; }
 
 /* ---------- Formulario ---------- */
