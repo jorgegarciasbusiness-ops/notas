@@ -40,7 +40,7 @@ const Finanzas = (() => {
   }
 
   // ---------- Estado ----------
-  let raiz, dlg, gastos = [], horas = [], paginas = [], ahorros = [], nominas = [], partidas = [];
+  let raiz, dlg, gastos = [], horas = [], paginas = [], ahorros = [], nominas = [], partidas = [], objetivos = [];
   const mesActual = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const estado = { vista: 'resumen', lunes: lunesDe(new Date()), mes: mesActual(), mesNomina: mesActual() };
 
@@ -169,12 +169,34 @@ const Finanzas = (() => {
     </svg>`;
   }
 
+  // Un objetivo: lo que llevas, lo que falta y, si tiene fecha, cuánto apartar al mes para llegar
+  function tarjetaObjetivo(o) {
+    const llevas = suma(ahorros.filter(a => a.objetivo_id === o.id), 'importe');
+    const falta = o.importe - llevas;
+    const pct = Math.max(0, Math.min(100, llevas / o.importe * 100));
+    let pie;
+    if (falta <= 0) pie = '<span class="fin-conseguido">¡Conseguido!</span>';
+    else if (o.fecha_limite) {
+      const hoy = new Date(), fin = deISO(o.fecha_limite);
+      const meses = (fin.getFullYear() - hoy.getFullYear()) * 12 + fin.getMonth() - hoy.getMonth();
+      pie = o.fecha_limite < hoyISO()
+        ? `Faltan ${euros(falta)} · la fecha ya pasó`
+        : `Faltan ${euros(falta)} · para el ${fin.getDate()} ${MESES[fin.getMonth()].slice(0, 3)} ${fin.getFullYear()}: ${euros(falta / Math.max(1, meses))}/mes`;
+    } else pie = `Faltan ${euros(falta)}`;
+    return `<button class="fin-objetivo" data-accion="editar-objetivo" data-id="${o.id}">
+        <span class="fin-objetivo-cab"><b>${esc(o.nombre)}</b><span>${euros(llevas)} de ${euros(o.importe)}</span></span>
+        <span class="fin-barra ${falta <= 0 ? 'bien' : ''}"><span style="width:${pct}%"></span></span>
+        <small>${pie}</small>
+      </button>`;
+  }
+
   function vistaAhorro() {
     const total = suma(ahorros, 'importe');
     const faltan = OBJETIVO_AHORRO - total;
     const lista = [...ahorros].sort((a, b) => b.fecha.localeCompare(a.fecha));
+    const nombreObjetivo = id => objetivos.find(o => o.id === id)?.nombre;
     const fila = a => `<button class="fin-fila" data-accion="editar-ahorro" data-id="${a.id}">
-        <span class="fin-fila-txt"><b>${esc(a.nota || 'Ingreso')}</b><small>${diaCorto(a.fecha)}</small></span>
+        <span class="fin-fila-txt"><b>${esc(a.nota || 'Ingreso')}</b><small>${diaCorto(a.fecha)}${nombreObjetivo(a.objetivo_id) ? ` · <span class="fin-previsto">${esc(nombreObjetivo(a.objetivo_id))}</span>` : ''}</small></span>
         <span class="fin-importe">${euros(a.importe)}</span>
       </button>`;
 
@@ -203,6 +225,7 @@ const Finanzas = (() => {
     }
 
     return `<div class="fin-columnas">
+        <div class="fin-pila">
         <section class="panel fin-ahorro">
           <h2>Hucha</h2>
           <div class="fin-ahorro-cab">
@@ -216,6 +239,12 @@ const Finanzas = (() => {
           <div class="lista">${lista.length ? lista.map(fila).join('') : '<p class="vacio">Aún no has apuntado ningún ingreso.</p>'}</div>
         </section>
         <section class="panel">
+          <h2>Objetivos</h2>
+          <div class="lista">${objetivos.length ? objetivos.map(tarjetaObjetivo).join('') : '<p class="vacio">Ponte una meta (un viaje, un equipo, un colchón…) y apunta cada ingreso a ella.</p>'}</div>
+          <button class="btn primario" data-accion="nuevo-objetivo">+ Objetivo</button>
+        </section>
+        </div>
+        <section class="panel">
           <div class="fin-nav">
             <button class="btn" data-accion="nomina-ant" aria-label="Mes anterior">‹</button>
             <b>Nómina de ${nombreMes(mes)}</b>
@@ -228,9 +257,9 @@ const Finanzas = (() => {
 
   async function render() {
     try {
-      [gastos, horas, paginas, ahorros, nominas, partidas] = await Promise.all([
+      [gastos, horas, paginas, ahorros, nominas, partidas, objetivos] = await Promise.all([
         Datos.gastos.listar(), Datos.horas.listar(), Datos.paginas.listar(),
-        Datos.ahorros.listar(), Datos.nominas.listar(), Datos.nomina_partidas.listar(),
+        Datos.ahorros.listar(), Datos.nominas.listar(), Datos.nomina_partidas.listar(), Datos.objetivos.listar(),
       ]);
     } catch {
       avisar('No se han podido cargar las finanzas. Revisa la conexión.');
@@ -348,16 +377,42 @@ const Finanzas = (() => {
         <label>Fecha<input name="fecha" type="date" required></label>
       </div>
       <label>Nota <small>(opcional)</small><input name="nota" autocomplete="off" placeholder="Ej.: nómina de noviembre"></label>
-      <p class="ayuda">Si sacas dinero de la hucha, pon el importe en negativo.</p>`, !!a.id);
+      ${objetivos.length ? `<label>Para<select name="objetivo_id">
+        <option value="">Hucha general</option>
+        ${objetivos.map(o => `<option value="${o.id}"${o.id === a.objetivo_id ? ' selected' : ''}>${esc(o.nombre)}</option>`).join('')}
+      </select></label>` : ''}
+      <p class="ayuda">Todo suma para la hucha general. Si sacas dinero, pon el importe en negativo.</p>`, !!a.id);
     f.elements.importe.value = a.importe ?? '';
     f.elements.fecha.value = a.fecha || hoyISO();
     f.elements.nota.value = a.nota || '';
     preparar(f, 'ahorros', a, form => {
       const importe = Number(String(form.elements.importe.value).replace(',', '.'));
       if (!importe) return null;
-      return { importe, fecha: form.elements.fecha.value, nota: form.elements.nota.value.trim() };
+      const datos = { importe, fecha: form.elements.fecha.value, nota: form.elements.nota.value.trim() };
+      if (form.elements.objetivo_id) datos.objetivo_id = form.elements.objetivo_id.value;
+      return datos;
     }, `el ingreso de ${euros(a.importe)}`);
     if (!a.id) f.elements.importe.focus();
+  }
+
+  function abrirObjetivo(o = {}) {
+    const f = formulario(o.id ? 'Editar objetivo' : 'Nuevo objetivo', `
+      <label>Qué quieres conseguir<input name="nombre" autocomplete="off" required placeholder="Ej.: viaje a Japón"></label>
+      <div class="fila">
+        <label>Cuánto (€)<input name="importe" type="number" inputmode="decimal" step="0.01" min="1" required></label>
+        <label>Para cuándo <small>(opcional)</small><input name="fecha_limite" type="date"></label>
+      </div>
+      <p class="ayuda">Luego, al apuntar un ingreso en la hucha, elige este objetivo en "Para".</p>`, !!o.id);
+    f.elements.nombre.value = o.nombre || '';
+    f.elements.importe.value = o.importe ?? '';
+    f.elements.fecha_limite.value = o.fecha_limite || '';
+    preparar(f, 'objetivos', o, form => {
+      const importe = Number(String(form.elements.importe.value).replace(',', '.'));
+      const nombre = form.elements.nombre.value.trim();
+      if (!nombre || !(importe > 0)) return null;
+      return { nombre, importe, fecha_limite: form.elements.fecha_limite.value };
+    }, `el objetivo «${o.nombre}» (los ingresos se quedan en la hucha general)`);
+    if (!o.id) f.elements.nombre.focus();
   }
 
   function abrirNomina() {
@@ -424,6 +479,8 @@ const Finanzas = (() => {
       case 'mes-sig': estado.mes = new Date(estado.mes.getFullYear(), estado.mes.getMonth() + 1, 1); break;
       case 'nuevo-ahorro': return abrirAhorro();
       case 'editar-ahorro': return abrirAhorro(ahorros.find(a => a.id === id));
+      case 'nuevo-objetivo': return abrirObjetivo();
+      case 'editar-objetivo': return abrirObjetivo(objetivos.find(o => o.id === id));
       case 'nueva-nomina': case 'editar-nomina': return abrirNomina();
       case 'nueva-partida': return abrirPartida();
       case 'editar-partida': return abrirPartida(partidas.find(p => p.id === id));

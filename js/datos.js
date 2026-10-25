@@ -20,6 +20,7 @@ const Datos = (() => {
     ahorros: { orden: 'fecha', actualizado: true },
     nominas: { orden: 'mes', actualizado: true },
     nomina_partidas: { orden: 'creado', actualizado: true },
+    objetivos: { orden: 'creado', actualizado: true },
   };
   // Horas tipo "08:00" o vacío; en la nube vacío es "nada"
   const hhmm = h => (h ? String(h).slice(0, 5) : '');
@@ -38,7 +39,7 @@ const Datos = (() => {
       // No ha cargado la pieza de Supabase (sin internet): se pide entrar y avisa del fallo
       const sinConexion = async () => { throw new Error('sin conexión'); };
       const vacia = { listar: sinConexion, crear: sinConexion, actualizar: sinConexion, borrar: sinConexion };
-      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, ahorros: vacia, nominas: vacia, nomina_partidas: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
+      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, ahorros: vacia, nominas: vacia, nomina_partidas: vacia, objetivos: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
     }
     const sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseClave);
     const comprobar = ({ data, error }) => { if (error) throw error; return data; };
@@ -82,7 +83,14 @@ const Datos = (() => {
         limpiar: f => ({ ...f, entrada: hhmm(f.entrada), salida: hhmm(f.salida), horas: Number(f.horas) }),
         preparar: d => horaONada(d, ['entrada', 'salida']),
       }),
-      ahorros: tabla('ahorros', { limpiar: f => ({ ...f, importe: Number(f.importe) }) }),
+      ahorros: tabla('ahorros', {
+        limpiar: f => ({ ...f, importe: Number(f.importe), objetivo_id: f.objetivo_id || '' }),
+        preparar: d => ('objetivo_id' in d ? { ...d, objetivo_id: d.objetivo_id || null } : d),
+      }),
+      objetivos: tabla('objetivos', {
+        limpiar: f => ({ ...f, importe: Number(f.importe), fecha_limite: f.fecha_limite || '' }),
+        preparar: d => ('fecha_limite' in d ? { ...d, fecha_limite: d.fecha_limite || null } : d),
+      }),
       nominas: tabla('nominas', { limpiar: f => ({ ...f, neto: Number(f.neto) }) }),
       nomina_partidas: tabla('nomina_partidas', { limpiar: f => ({ ...f, importe: Number(f.importe) }) }),
       async sesion() { const { data } = await sb.auth.getSession(); return data.session; },
@@ -141,6 +149,7 @@ const Datos = (() => {
       ].map(([n, importe, nota]) => ({ id: nuevoId(), fecha: dia(n), importe, nota, creado: ahora(), actualizado: ahora() })),
       nominas: () => [],
       nomina_partidas: () => [],
+      objetivos: () => [{ id: nuevoId(), nombre: 'Viaje de verano', importe: 1200, fecha_limite: dia(240), creado: ahora(), actualizado: ahora() }],
     };
 
     function tabla(nombre) {
@@ -186,6 +195,7 @@ const Datos = (() => {
       ahorros: tabla('ahorros'),
       nominas: tabla('nominas'),
       nomina_partidas: tabla('nomina_partidas'),
+      objetivos: tabla('objetivos'),
       async sesion() { return { local: true }; },
       async entrar() {},
       async salir() {},
