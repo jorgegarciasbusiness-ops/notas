@@ -151,7 +151,7 @@ const Finanzas = (() => {
     const boton = (v, t) => `<button class="${estado.vista === v ? 'activo' : ''}" data-accion="vista" data-vista="${v}">${t}</button>`;
     const cuerpo = { resumen: vistaResumen, gastos: vistaGastos, horas: vistaHoras }[estado.vista]();
     raiz.innerHTML = `<header class="ag-cab"><h1>Finanzas</h1>
-        <div class="segmentado">${boton('resumen', 'Resumen')}${boton('gastos', 'Gastos')}${boton('horas', 'Horas')}</div>
+        <div class="segmentado">${boton('gastos', 'Gastos')}${boton('horas', 'Horas')}${boton('resumen', 'Resumen')}</div>
       </header>${cuerpo}`;
   }
 
