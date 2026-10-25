@@ -15,6 +15,15 @@ const Datos = (() => {
     agenda: { orden: 'fecha', actualizado: true },
     bandeja: { orden: 'creado', actualizado: false },
     paginas: { orden: 'titulo', actualizado: true },
+    gastos: { orden: 'fecha', actualizado: true },
+    horas: { orden: 'fecha', actualizado: true },
+  };
+  // Horas tipo "08:00" o vacío; en la nube vacío es "nada"
+  const hhmm = h => (h ? String(h).slice(0, 5) : '');
+  const horaONada = (d, campos) => {
+    const x = { ...d };
+    for (const c of campos) if (c in x) x[c] = x[c] || null;
+    return x;
   };
 
   const hayNube = typeof CONFIG !== 'undefined' && CONFIG.supabaseUrl && CONFIG.supabaseClave;
@@ -26,7 +35,7 @@ const Datos = (() => {
       // No ha cargado la pieza de Supabase (sin internet): se pide entrar y avisa del fallo
       const sinConexion = async () => { throw new Error('sin conexión'); };
       const vacia = { listar: sinConexion, crear: sinConexion, actualizar: sinConexion, borrar: sinConexion };
-      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
+      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
     }
     const sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseClave);
     const comprobar = ({ data, error }) => { if (error) throw error; return data; };
@@ -60,11 +69,16 @@ const Datos = (() => {
       modo: 'nube',
       // En la nube la hora y las notas vacías se guardan como "nada"; la app las quiere como texto vacío
       agenda: tabla('agenda', {
-        limpiar: f => ({ ...f, hora: f.hora ? f.hora.slice(0, 5) : '', notas: f.notas || '' }),
-        preparar: d => ('hora' in d ? { ...d, hora: d.hora || null } : d),
+        limpiar: f => ({ ...f, hora: hhmm(f.hora), notas: f.notas || '' }),
+        preparar: d => horaONada(d, ['hora']),
       }),
       bandeja: tabla('bandeja'),
       paginas: tabla('paginas'),
+      gastos: tabla('gastos', { limpiar: f => ({ ...f, importe: Number(f.importe) }) }),
+      horas: tabla('horas', {
+        limpiar: f => ({ ...f, entrada: hhmm(f.entrada), salida: hhmm(f.salida), horas: Number(f.horas) }),
+        preparar: d => horaONada(d, ['entrada', 'salida']),
+      }),
       async sesion() { const { data } = await sb.auth.getSession(); return data.session; },
       async entrar(email, clave) {
         const { error } = await sb.auth.signInWithPassword({ email, password: clave });
@@ -109,6 +123,13 @@ const Datos = (() => {
         { titulo: 'Plan de prueba', seccion: 'Finanzas', contenido: '## Resumen\n\n| Partida | Importe |\n| --- | --- |\n| Fijos | 50 € |\n| Ahorro | 100 € |\n\n- [x] Abrir la app\n- [ ] Probar a editar esta página' },
         { titulo: 'Ideas de contenido', seccion: 'Kok$', contenido: '## Formatos\n\n- **Gancho en 10 sitios**\n- Detrás de cámaras\n\n> Lo que funciona se repite.' },
       ].map(p => ({ id: nuevoId(), orden: 0, creado: ahora(), actualizado: ahora(), ...p })),
+      gastos: () => [
+        [0, 12.5, 'Comida fuera', 'Comida'], [-1, 8, 'Cine', 'Ocio'], [-2, 4.2, 'Café y bollo', 'Comida'],
+        [-8, 22, 'Camiseta', 'Ropa'], [-9, 15, 'Cena', 'Comida'], [-10, 20, 'Concierto', 'Ocio'],
+      ].map(([n, importe, concepto, categoria]) => ({ id: nuevoId(), fecha: dia(n), importe, concepto, categoria, creado: ahora(), actualizado: ahora() })),
+      horas: () => [
+        [-6, '08:00', '14:00', 6], [-4, '07:00', '15:00', 8], [-1, '10:00', '15:00', 5],
+      ].map(([n, entrada, salida, horas]) => ({ id: nuevoId(), fecha: dia(n), entrada, salida, horas, trabajo: 'Catering (Interim)', nota: '', creado: ahora(), actualizado: ahora() })),
     };
 
     function tabla(nombre) {
@@ -149,6 +170,8 @@ const Datos = (() => {
       agenda: tabla('agenda'),
       bandeja: tabla('bandeja'),
       paginas: tabla('paginas'),
+      gastos: tabla('gastos'),
+      horas: tabla('horas'),
       async sesion() { return { local: true }; },
       async entrar() {},
       async salir() {},

@@ -214,5 +214,8 @@ const Paginas = (() => {
   // No recarga mientras editas, para no perder lo escrito
   function refrescar() { if (raiz && !estado.editando) render(); }
 
-  return { montar, refrescar };
+  // Para abrir una página concreta desde otro sector (p. ej., el plan desde Finanzas)
+  function elegir(id) { Object.assign(estado, { actual: id, editando: false, nueva: false }); }
+
+  return { montar, refrescar, elegir, aHTML };
 })();
