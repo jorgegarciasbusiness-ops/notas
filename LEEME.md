@@ -3,7 +3,7 @@
 *Nombre provisional. Empezada el 2026-10-25.*
 
 ## Qué hace
-Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja y Páginas (Finanzas y Kok$, en camino). La app recuerda el último sector que abriste.
+Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Finanzas (Kok$, en camino). La app recuerda el último sector que abriste.
 
 ### Agenda
 - **Mes**: calendario con un color por ámbito. Pulsa un día para ver lo que tiene debajo (o a la derecha en el PC).
@@ -27,6 +27,11 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja y Páginas (Fin
 - **Editar**: botón Editar. Los botones Título, N (negrita), Lista, Casilla y Tabla ponen el formato.
 - **Nueva**: botón "+ Nueva". **Borrar**: dentro de Editar (pregunta antes).
 
+### Finanzas
+- **Resumen**: lo gastado esta semana contra el límite de 50 € (barra verde, amarilla al acercarte y roja si te pasas), las horas trabajadas del mes y tu **Plan de finanzas** (se edita en Páginas).
+- **Gastos**: apunta cada gasto (importe, concepto, categoría y fecha) o el total de la semana. Se suman por semana, de lunes a domingo. Abajo, las últimas 8 semanas y en qué categorías se fue el dinero.
+- **Horas**: cada turno con entrada y salida; las horas se calculan solas. Total del mes, para el parte del catering.
+
 ### Aspecto
 - **Modo claro / oscuro**: botón abajo del menú en el PC y botón redondo arriba a la derecha en el móvil. Al principio sigue al PC o al iPhone; si lo cambias, se queda como lo dejaste.
 - Iconos de **línea fina** (elegidos el 2026-10-25). Los iconos nuevos tienen que seguir el mismo estilo.
@@ -40,7 +45,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja y Páginas (Fin
 ## Próximos pasos — pasar todo lo de Notion (plan aprobado el 2026-10-25)
 1. ~~Agenda~~ (hecha, es el calendario principal).
 2. ~~Bandeja + Páginas~~ (sectores hechos el 2026-10-25).
-3. **Finanzas**: gasto semanal (límite 50 €), horas del catering y página del plan.
+3. ~~Finanzas~~ (hecho el 2026-10-25: plan copiado a Páginas y los 6 turnos de octubre a Horas; el gasto semanal de Notion estaba vacío).
 4. **Kok$**: calendario de contenido y páginas estado, marketing y lanzamientos.
 5. Cambiar al secretario (resumen, revisión del domingo, contrato) para que todo use la app. Revisión semanal → una página de la app.
 - El **historial** (candidaturas, PROYECTOS, ALMOALB, Blaziken, Calendario viejo) se queda en Notion (plan gratis); no se pasa.
@@ -57,6 +62,6 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja y Páginas (Fin
 - Cómo publicar cambios: no hay git en local con sesión de GitHub. Se copian los archivos cambiados al scratchpad y se suben con Claude in Chrome (sesión de Koke) en `github.com/jorgegarciasbusiness-ops/notas/upload/main/<carpeta>`. `IDEA.md` no se sube (notas privadas).
 - Si se cambia algo de la base de datos: nuevo `nube/NN-*.sql`, ejecutarlo en el editor SQL de Supabase y subirlo también al repositorio.
 - Cada sector es un archivo en `js/` con `montar()` y `refrescar()`; se registra en `js/app.js` y en el menú de `index.html`. `app.js` limpia `onclick/onsubmit/onmousedown` del contenedor al cambiar de sector.
-- Tablas: `agenda`, `bandeja` (texto, creado), `paginas` (titulo, seccion, contenido en Markdown, orden). En `datos.js` se añaden en `TABLAS` y en el `return` de nube y local.
+- Tablas: `agenda`, `bandeja` (texto, creado), `paginas` (titulo, seccion, contenido en Markdown, orden), `gastos` (fecha, importe, concepto, categoria), `horas` (fecha, entrada, salida, horas, trabajo, nota). El límite semanal (50 €) está en `js/finanzas.js`; el resumen muestra la página de sección Finanzas cuyo título empieza por "Plan". En Markdown, usar `≈` y no `~` (la virgulilla tacha texto). En `datos.js` se añaden en `TABLAS` y en el `return` de nube y local.
 - Páginas: Markdown con `marked` + `DOMPurify` (jsDelivr, versión fija). El secretario puede escribir páginas directamente en Markdown (tablas GFM, `- [ ]` casillas).
 - Iconos de la app en `iconos/`: una **K** blanca gruesa sobre azul (elegida por Koke, 2026-10-25).
