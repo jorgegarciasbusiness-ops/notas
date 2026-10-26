@@ -377,6 +377,18 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
 .fin-conseguido { color: var(--verde); font-weight: 700; }
 .fin-horas .fin-cifra { margin-bottom: 10px; }
 
+/* ---------- Kok$ ---------- */
+.kk-tarjeta { align-items: center; }
+.kk-avanzar {
+  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  border: 1px solid var(--linea); background: var(--panel); color: var(--suave); font-size: 18px; line-height: 1;
+}
+.kk-avanzar:hover { color: var(--texto); border-color: var(--c); }
+.kk-lista { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.kk-bloque h2 small, .kk-bloque h2 small { color: var(--suave); font-weight: 400; font-size: 13px; }
+.kk-paginas { max-width: 640px; }
+.kk-paginas .ayuda { margin-top: 10px; }
+
 /* ---------- Formulario ---------- */
 dialog {
   border: 0; border-radius: 14px; padding: 0;
