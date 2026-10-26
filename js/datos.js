@@ -21,6 +21,7 @@ const Datos = (() => {
     nominas: { orden: 'mes', actualizado: true },
     nomina_partidas: { orden: 'creado', actualizado: true },
     objetivos: { orden: 'creado', actualizado: true },
+    contenido: { orden: 'fecha', actualizado: true },
   };
   // Horas tipo "08:00" o vacío; en la nube vacío es "nada"
   const hhmm = h => (h ? String(h).slice(0, 5) : '');
@@ -39,7 +40,7 @@ const Datos = (() => {
       // No ha cargado la pieza de Supabase (sin internet): se pide entrar y avisa del fallo
       const sinConexion = async () => { throw new Error('sin conexión'); };
       const vacia = { listar: sinConexion, crear: sinConexion, actualizar: sinConexion, borrar: sinConexion };
-      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, ahorros: vacia, nominas: vacia, nomina_partidas: vacia, objetivos: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
+      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, ahorros: vacia, nominas: vacia, nomina_partidas: vacia, objetivos: vacia, contenido: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
     }
     const sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseClave);
     const comprobar = ({ data, error }) => { if (error) throw error; return data; };
@@ -92,6 +93,15 @@ const Datos = (() => {
         preparar: d => ('fecha_limite' in d ? { ...d, fecha_limite: d.fecha_limite || null } : d),
       }),
       nominas: tabla('nominas', { limpiar: f => ({ ...f, neto: Number(f.neto) }) }),
+      contenido: tabla('contenido', {
+        limpiar: f => ({ ...f, fecha: f.fecha || '', redes: f.redes || [], vistas: f.vistas ?? '' }),
+        preparar: d => {
+          const x = { ...d };
+          if ('fecha' in x) x.fecha = x.fecha || null;
+          if ('vistas' in x) x.vistas = x.vistas === '' || x.vistas == null ? null : Number(x.vistas);
+          return x;
+        },
+      }),
       nomina_partidas: tabla('nomina_partidas', { limpiar: f => ({ ...f, importe: Number(f.importe) }) }),
       async sesion() { const { data } = await sb.auth.getSession(); return data.session; },
       async entrar(email, clave) {
@@ -150,6 +160,13 @@ const Datos = (() => {
       nominas: () => [],
       nomina_partidas: () => [],
       objetivos: () => [{ id: nuevoId(), nombre: 'Viaje de verano', importe: 1200, fecha_limite: dia(240), creado: ahora(), actualizado: ahora() }],
+      contenido: () => [
+        ['Gancho en 10 sitios #1', -3, ['TikTok'], 'Gancho en 10 sitios', 'Publicado', 1250],
+        ['Nota del iPhone → la maceta', -1, ['TikTok'], 'Nota del iPhone a canción', 'Editado', ''],
+        ['Detrás de cámaras · estudio', 1, ['TikTok', 'Instagram'], 'Detrás de cámaras', 'Por grabar', ''],
+        ['Fragmento nuevo · tema de amor', 3, ['TikTok'], 'Fragmento nuevo', 'Idea', ''],
+        ['Reel de la semana', 5, ['Instagram'], 'Otro', 'Programado', ''],
+      ].map(([pieza, n, redes, formato, estado, vistas]) => ({ id: nuevoId(), pieza, fecha: dia(n), redes, formato, tema: '', estado, enlace: '', vistas, notas: '', creado: ahora(), actualizado: ahora() })),
     };
 
     function tabla(nombre) {
@@ -196,6 +213,7 @@ const Datos = (() => {
       nominas: tabla('nominas'),
       nomina_partidas: tabla('nomina_partidas'),
       objetivos: tabla('objetivos'),
+      contenido: tabla('contenido'),
       async sesion() { return { local: true }; },
       async entrar() {},
       async salir() {},

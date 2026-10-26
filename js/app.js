@@ -16,7 +16,7 @@ function avisar(texto) {
 /* Arranque: entrar con tu correo (si hay nube), cambiar de sector y montar cada uno */
 (() => {
   const contenido = document.getElementById('contenido');
-  const sectores = { agenda: Agenda, bandeja: Bandeja, paginas: Paginas, finanzas: Finanzas };
+  const sectores = { agenda: Agenda, bandeja: Bandeja, paginas: Paginas, finanzas: Finanzas, koks: Koks };
   let actual = null;
 
   function abrir(nombre) {
