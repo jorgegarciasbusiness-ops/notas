@@ -24,7 +24,7 @@ function avisar(texto) {
     try { localStorage.setItem('notas.sector', nombre); } catch { /* sin memoria */ }
     document.querySelectorAll('.sector').forEach(b => b.classList.toggle('activo', b.dataset.sector === nombre));
     // Cada sector pone sus propios manejadores; se quitan los del anterior
-    contenido.onclick = contenido.onsubmit = contenido.onmousedown = null;
+    contenido.onclick = contenido.onsubmit = contenido.onmousedown = contenido.oninput = contenido.onkeydown = null;
     sectores[nombre].montar(contenido);
   }
 
