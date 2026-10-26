@@ -3,7 +3,7 @@
 *Nombre provisional. Empezada el 2026-10-25.*
 
 ## Qué hace
-Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Finanzas (Kok$, en camino). La app recuerda el último sector que abriste.
+Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Finanzas y Kok$. La app recuerda el último sector que abriste.
 
 ### Agenda
 - **Mes**: calendario con un color por ámbito. Pulsa un día para ver lo que tiene debajo (o a la derecha en el PC).
@@ -39,6 +39,12 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Fin
   - **Nómina**: lo que cobras cada mes y a dónde va cada parte (Ahorro, Gastos fijos, Gastos variables, Libre o lo que escribas), con una barra de colores y el % de cada cosa. Avisa de lo que queda sin repartir. "Copiar el reparto" trae el del mes anterior para no escribirlo otra vez.
 - Orden de las pestañas: Gastos · Horas · Ahorro · Resumen.
 
+### Kok$
+- **Tablero**: una columna por estado (Idea → Por grabar → Grabado → Editado → Programado → Publicado). El botón **›** de cada pieza la pasa al siguiente estado.
+- **Lista**: próximas, retrasadas (fecha pasada sin publicar, en rojo) y publicadas con sus vistas.
+- **Páginas**: Estado de Kok$, Marketing y una por lanzamiento (se editan en Páginas, sección Kok$).
+- Cada pieza: nombre, fecha, redes (TikTok, Instagram, YouTube), formato, tema, estado, vistas, enlace y notas.
+
 ### Aspecto
 - **Modo claro / oscuro**: botón abajo del menú en el PC y botón redondo arriba a la derecha en el móvil. Al principio sigue al PC o al iPhone; si lo cambias, se queda como lo dejaste.
 - Iconos de **línea fina** (elegidos el 2026-10-25). Los iconos nuevos tienen que seguir el mismo estilo.
@@ -54,8 +60,8 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Fin
 1. ~~Agenda~~ (hecha, es el calendario principal).
 2. ~~Bandeja + Páginas~~ (sectores hechos el 2026-10-25).
 3. ~~Finanzas~~ (hecho el 2026-10-25: plan copiado a Páginas y los 6 turnos de octubre a Horas; el gasto semanal de Notion estaba vacío).
-4. **Kok$**: calendario de contenido y páginas estado, marketing y lanzamientos.
-5. Cambiar al secretario (resumen, revisión del domingo, contrato) para que todo use la app. Revisión semanal → una página de la app.
+4. ~~Kok$~~ (hecho el 2026-10-27: 20 piezas del calendario de contenido y 3 páginas copiadas).
+5. ~~Cambiar al secretario~~ para Finanzas, Bandeja y Revisión semanal (hecho el 2026-10-27). Falta Kok$ cuando se pase.
 - El **historial** (candidaturas, PROYECTOS, ALMOALB, Blaziken, Calendario viejo) se queda en Notion (plan gratis); no se pasa.
 
 
@@ -70,6 +76,6 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Fin
 - Cómo publicar cambios: no hay git en local con sesión de GitHub. Se copian los archivos cambiados al scratchpad y se suben con Claude in Chrome (sesión de Koke) en `github.com/jorgegarciasbusiness-ops/notas/upload/main/<carpeta>`. `IDEA.md` no se sube (notas privadas).
 - Si se cambia algo de la base de datos: nuevo `nube/NN-*.sql`, ejecutarlo en el editor SQL de Supabase y subirlo también al repositorio.
 - Cada sector es un archivo en `js/` con `montar()` y `refrescar()`; se registra en `js/app.js` y en el menú de `index.html`. `app.js` limpia `onclick/onsubmit/onmousedown` del contenedor al cambiar de sector.
-- Tablas: `agenda`, `bandeja` (texto, creado), `paginas` (titulo, seccion, contenido en Markdown, orden), `gastos` (fecha, importe, concepto, categoria), `horas` (fecha, entrada, salida, horas, trabajo, nota), `ahorros` (fecha, importe, nota, objetivo_id opcional), `objetivos` (nombre, importe, fecha_limite opcional), `nominas` (mes = día 1, neto; una por mes), `nomina_partidas` (mes, concepto, importe). Objetivo de ahorro (10.000 €) en `js/finanzas.js`. Koke apunta él la nómina y el reparto el primer mes; cuando se repita, el secretario puede apuntarlos (con su OK). El límite semanal (50 €) está en `js/finanzas.js`; el resumen muestra la página de sección Finanzas cuyo título empieza por "Plan". En Markdown, usar `≈` y no `~` (la virgulilla tacha texto). En `datos.js` se añaden en `TABLAS` y en el `return` de nube y local.
+- Tablas: `agenda`, `bandeja` (texto, creado), `paginas` (titulo, seccion, contenido en Markdown, orden), `gastos` (fecha, importe, concepto, categoria), `horas` (fecha, entrada, salida, horas, trabajo, nota), `ahorros` (fecha, importe, nota, objetivo_id opcional), `objetivos` (nombre, importe, fecha_limite opcional), `contenido` (pieza, fecha, redes text[], formato, tema, estado, enlace, vistas, notas), `nominas` (mes = día 1, neto; una por mes), `nomina_partidas` (mes, concepto, importe). Objetivo de ahorro (10.000 €) en `js/finanzas.js`. Koke apunta él la nómina y el reparto el primer mes; cuando se repita, el secretario puede apuntarlos (con su OK). El límite semanal (50 €) está en `js/finanzas.js`; el resumen muestra la página de sección Finanzas cuyo título empieza por "Plan". En Markdown, usar `≈` y no `~` (la virgulilla tacha texto). En `datos.js` se añaden en `TABLAS` y en el `return` de nube y local.
 - Páginas: Markdown con `marked` + `DOMPurify` (jsDelivr, versión fija). El secretario puede escribir páginas directamente en Markdown (tablas GFM, `- [ ]` casillas).
 - Iconos de la app en `iconos/`: una **K** blanca gruesa sobre azul (elegida por Koke, 2026-10-25).
