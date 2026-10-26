@@ -18,6 +18,8 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Fin
 
 ### Bandeja
 - Para apuntar algo rápido, sobre todo desde el iPhone: escribes y pulsas **Apuntar**.
+- **Dictar**: pulsa el micro, habla, y lo que dices se va escribiendo en la caja. Pulsa el micro otra vez para parar, revisa y **Apuntar**. La voz la pasa a texto el propio navegador (no se guarda ningún audio). Si en el iPhone no funciona dentro de la app, el micro del teclado hace lo mismo.
+- En el PC, Intro apunta y Mayús+Intro cambia de línea.
 - Lo último sale arriba, con el día y la hora.
 - Claude la vacía en cada sesión y pasa cada cosa a su sitio. La × borra una nota (pregunta antes).
 
@@ -43,6 +45,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas y Fin
 
 ## Cómo se abre
 - **En internet**: **https://jorgegarciasbusiness-ops.github.io/notas/**. Entras con tu correo y tu contraseña.
+- **En el PC**: acceso directo **Notas** en el Escritorio. Abre la app en su propia ventana (sin pestañas ni barra de direcciones).
 - **En el iPhone**: abre la dirección en Safari → botón Compartir → **Añadir a pantalla de inicio**. Queda como una app más, con su icono azul.
 - **Modo prueba**: si `js/config.js` está vacío, la app guarda solo en el navegador de ese PC y trae datos de ejemplo.
 - Al volver a la app, se recargan los datos (por si cambiaste algo en el otro aparato).
