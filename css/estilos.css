@@ -246,7 +246,13 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
 /* ---------- Bandeja ---------- */
 .subtitulo { margin: -4px 0 14px; color: var(--suave); font-size: 14px; }
 .bandeja-nueva { display: flex; gap: 8px; margin-bottom: 14px; max-width: 640px; }
-.bandeja-nueva input { flex: 1; }
+.bandeja-nueva { align-items: flex-end; }
+.bandeja-nueva textarea { flex: 1; resize: none; min-height: 40px; max-height: 40vh; overflow-y: auto; line-height: 1.4; }
+.mic { width: 42px; height: 40px; padding: 0; display: grid; place-items: center; flex: none; }
+.mic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.mic.escuchando { background: var(--peligro); border-color: var(--peligro); color: #fff; animation: latido 1.2s ease-in-out infinite; }
+@keyframes latido { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--peligro) 25%, transparent); } }
+.mic-estado { margin: -6px 0 12px; color: var(--peligro); font-size: 13px; }
 .bandeja-lista { display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
 .nota {
   display: flex; align-items: flex-start; gap: 10px;
