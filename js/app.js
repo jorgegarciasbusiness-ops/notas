@@ -117,6 +117,7 @@ function avisar(texto) {
         await Datos.entrar(f.elements.email.value.trim(), f.elements.clave.value);
         document.body.classList.remove('sin-sesion');
         abrir(ultimoSector());
+        Avisos.iniciar();
       } catch (e) {
         error.textContent = /invalid/i.test(e.message || '') ? 'Correo o contraseña incorrectos.' : 'No se ha podido entrar. Revisa la conexión.';
         error.hidden = false;
@@ -129,7 +130,7 @@ function avisar(texto) {
   (async () => {
     let sesion = null;
     try { sesion = await Datos.sesion(); } catch { /* sin conexión: se pide entrar */ }
-    if (sesion) abrir(ultimoSector());
+    if (sesion) { abrir(ultimoSector()); Avisos.iniciar(); }
     else pantallaEntrar();
   })();
 })();

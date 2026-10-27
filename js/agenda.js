@@ -10,6 +10,9 @@ const Agenda = (() => {
   const DIAS_CORTOS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
   const DIAS_LARGOS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
   const PESO = { Alta: 0, Media: 1, Baja: 2 };
+  // Avisos: minutos antes del inicio ('' = sin aviso). Por defecto, 1 h antes (decisión de Koke, 2026-10-28)
+  const AVISOS = [['', 'Sin aviso'], [0, 'A la hora'], [15, '15 min antes'], [30, '30 min antes'], [60, '1 h antes'], [120, '2 h antes'], [1440, '1 día antes']];
+  const AVISO_POR_DEFECTO = 60;
 
   // ---------- Utilidades de fechas y texto ----------
   const pad = n => String(n).padStart(2, '0');
@@ -78,6 +81,7 @@ const Agenda = (() => {
     const meta = [
       conFecha && !varios ? `<span>${fechaCorta(e.fecha)}</span>` : '',
       cuando ? `<span>${esc(cuando)}</span>` : '',
+      e.aviso_min !== '' && e.aviso_min != null && !terminada(e) ? '<span class="t-aviso" title="Con aviso"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg></span>' : '',
       `<span>${esc(e.tipo)}</span>`,
       e.estado === 'En progreso' ? '<span class="etq progreso">En progreso</span>' : '',
       e.estado === 'Cancelado' ? '<span>Cancelado</span>' : '',
@@ -202,6 +206,7 @@ const Agenda = (() => {
     const nueva = !e.id;
     const opciones = (lista, actual) => lista.map(v => `<option${v === actual ? ' selected' : ''}>${esc(v)}</option>`).join('');
     const ambito = e.ambito || 'Personal';
+    const aviso = nueva ? AVISO_POR_DEFECTO : (e.aviso_min ?? '');
     dlg.innerHTML = `<form class="formulario">
       <h2>${nueva ? 'Nueva entrada' : 'Editar entrada'}</h2>
       <label>Nombre<input name="nombre" required autocomplete="off"></label>
@@ -220,7 +225,11 @@ const Agenda = (() => {
         <label>Tipo<select name="tipo">${opciones(TIPOS, e.tipo || 'Tarea')}</select></label>
         <label>Prioridad<select name="prioridad">${opciones(PRIORIDADES, e.prioridad || 'Media')}</select></label>
       </div>
-      <label>Estado<select name="estado">${opciones(ESTADOS, e.estado || 'Sin empezar')}</select></label>
+      <div class="fila">
+        <label>Estado<select name="estado">${opciones(ESTADOS, e.estado || 'Sin empezar')}</select></label>
+        <label>Avísame<select name="aviso_min">${AVISOS.map(([v, t]) => `<option value="${v}"${String(v) === String(aviso) ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+      </div>
+      <p class="ayuda">Si no tiene hora, el aviso cuenta desde las 9:00 de ese día.</p>
       <label>Notas<textarea name="notas" rows="3"></textarea></label>
       <div class="acciones">
         ${nueva ? '' : '<button type="button" class="btn peligro" data-f="borrar">Borrar</button>'}
@@ -246,6 +255,10 @@ const Agenda = (() => {
       ev.preventDefault();
       const datos = Object.fromEntries(new FormData(f));
       datos.nombre = datos.nombre.trim();
+      // Si cambia cuándo es o el aviso, el aviso vuelve a quedar pendiente
+      if (nueva || datos.fecha !== e.fecha || datos.hora !== (e.hora || '') || String(datos.aviso_min) !== String(e.aviso_min ?? '')) {
+        datos.avisado_en = null;
+      }
       if (!datos.nombre) return;
       // Un fin el mismo día que el inicio es un evento de un solo día
       if (datos.fecha_fin && datos.fecha_fin <= datos.fecha) datos.fecha_fin = '';

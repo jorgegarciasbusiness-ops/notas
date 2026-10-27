@@ -74,9 +74,25 @@ const Datos = (() => {
       modo: 'nube',
       // En la nube la hora y las notas vacías se guardan como "nada"; la app las quiere como texto vacío
       agenda: tabla('agenda', {
-        limpiar: f => ({ ...f, hora: hhmm(f.hora), hora_fin: hhmm(f.hora_fin), fecha_fin: f.fecha_fin || '', notas: f.notas || '' }),
-        preparar: d => horaONada(d, ['hora', 'hora_fin', 'fecha_fin']),
+        limpiar: f => ({ ...f, hora: hhmm(f.hora), hora_fin: hhmm(f.hora_fin), fecha_fin: f.fecha_fin || '', notas: f.notas || '', aviso_min: f.aviso_min ?? '' }),
+        preparar: d => {
+          const x = horaONada(d, ['hora', 'hora_fin', 'fecha_fin']);
+          if ('aviso_min' in x) x.aviso_min = x.aviso_min === '' || x.aviso_min == null ? null : Number(x.aviso_min);
+          return x;
+        },
       }),
+      // Avisos: aparatos que reciben notificaciones y la función de la nube que las manda
+      push: {
+        async clavePublica() { return comprobar(await sb.rpc('clave_publica_push')); },
+        async guardar(s) { comprobar(await sb.from('push_suscripciones').upsert(s, { onConflict: 'endpoint' })); },
+        async borrar(endpoint) { comprobar(await sb.from('push_suscripciones').delete().eq('endpoint', endpoint)); },
+        async probar(endpoint) {
+          const r = await fetch(`${CONFIG.supabaseUrl}/functions/v1/avisos`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prueba: true, endpoint }),
+          });
+          return r.ok;
+        },
+      },
       bandeja: tabla('bandeja'),
       paginas: tabla('paginas'),
       gastos: tabla('gastos', { limpiar: f => ({ ...f, importe: Number(f.importe) }) }),
