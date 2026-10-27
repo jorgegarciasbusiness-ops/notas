@@ -1,7 +1,7 @@
 /* Sector Agenda: vistas de mes, semana y tablero por ámbito */
 const Agenda = (() => {
   // Mismas opciones que el Calendario de Notion, para poder migrar sin pérdidas
-  const AMBITOS = ['Trabajo', 'Kok$', 'Amor', 'Salud', 'Finanzas', 'Curros', 'Personal'];
+  const AMBITOS = ['Trabajo', 'Kok$', 'Amor', 'Salud', 'Finanzas', 'Curros', 'Viajes', 'Personal'];
   const TIPOS = ['Tarea', 'Evento Personal', 'Cita', 'Reunión', 'Recordatorio', 'Music', 'content', 'ALMOALB', 'Meta'];
   const PRIORIDADES = ['Alta', 'Media', 'Baja'];
   const ESTADOS = ['Sin empezar', 'En progreso', 'Listo', 'Cancelado'];
@@ -38,6 +38,9 @@ const Agenda = (() => {
     if (e.hora && e.hora_fin) return `${e.hora}–${e.hora_fin}`;
     return e.hora || (e.hora_fin ? `hasta ${e.hora_fin}` : '');
   }
+
+  // El evento de varios días que tiñe ese día con el color de su ámbito (el primero, si hay varios)
+  const deVariosDias = items => items.find(e => finDe(e) !== e.fecha && e.estado !== 'Cancelado');
 
   // Cada evento sale en todos los días que dura (máximo 2 meses, para no colgar la pantalla)
   function porDia(lista) {
@@ -140,7 +143,8 @@ const Agenda = (() => {
     let celdas = '';
     for (let d = inicio; d <= fin; d = sumarDias(d, 1)) {
       const iso = aISO(d), items = dias.get(iso) || [];
-      const clases = ['dia', d.getMonth() !== m && 'fuera', iso === hoy && 'hoy', iso === estado.dia && 'sel'].filter(Boolean).join(' ');
+      const largo = deVariosDias(items);
+      const clases = ['dia', d.getMonth() !== m && 'fuera', iso === hoy && 'hoy', iso === estado.dia && 'sel', largo && `dia-evento ${slug(largo.ambito)}`].filter(Boolean).join(' ');
       const pildoras = items.slice(0, 3).map(e => `<span class="pildora ${slug(e.ambito)} ${terminada(e) ? 'hecha' : ''}">${esc(e.nombre)}</span>`).join('');
       const mas = items.length > 3 ? `<span class="mas">+${items.length - 3} más</span>` : '';
       celdas += `<button class="${clases}" data-accion="dia" data-fecha="${iso}"><span class="num">${d.getDate()}</span><span class="pildoras">${pildoras}${mas}</span></button>`;
@@ -159,7 +163,8 @@ const Agenda = (() => {
     let html = '';
     for (let i = 0; i < 7; i++) {
       const d = sumarDias(lunes, i), iso = aISO(d), items = dias.get(iso) || [];
-      html += `<section class="sem-dia ${iso === hoy ? 'hoy' : ''}">
+      const largo = deVariosDias(items);
+      html += `<section class="sem-dia ${iso === hoy ? 'hoy' : ''} ${largo ? `dia-evento ${slug(largo.ambito)}` : ''}">
         <header><span>${DIAS_CORTOS[i]}</span><b>${d.getDate()}</b></header>
         ${items.map(e => tarjeta(e)).join('')}
         <button class="anadir" data-accion="nueva" data-fecha="${iso}">+ Añadir</button>
