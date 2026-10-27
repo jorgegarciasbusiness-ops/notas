@@ -74,8 +74,8 @@ const Datos = (() => {
       modo: 'nube',
       // En la nube la hora y las notas vacías se guardan como "nada"; la app las quiere como texto vacío
       agenda: tabla('agenda', {
-        limpiar: f => ({ ...f, hora: hhmm(f.hora), notas: f.notas || '' }),
-        preparar: d => horaONada(d, ['hora']),
+        limpiar: f => ({ ...f, hora: hhmm(f.hora), hora_fin: hhmm(f.hora_fin), fecha_fin: f.fecha_fin || '', notas: f.notas || '' }),
+        preparar: d => horaONada(d, ['hora', 'hora_fin', 'fecha_fin']),
       }),
       bandeja: tabla('bandeja'),
       paginas: tabla('paginas'),

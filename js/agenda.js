@@ -27,11 +27,29 @@ const Agenda = (() => {
   const ordenar = lista => [...lista].sort((a, b) =>
     a.fecha.localeCompare(b.fecha) || (a.hora || '').localeCompare(b.hora || '') || PESO[a.prioridad] - PESO[b.prioridad]);
 
+  // Último día del evento (si no tiene fin, el mismo día)
+  const finDe = e => (e.fecha_fin && e.fecha_fin > e.fecha ? e.fecha_fin : e.fecha);
+
+  // Cuándo: "18:00–20:00" el mismo día, o "lun 27 oct 18:00 → jue 30 oct" si dura varios días
+  function horario(e) {
+    if (finDe(e) !== e.fecha) {
+      return `${fechaCorta(e.fecha)}${e.hora ? ' ' + e.hora : ''} → ${fechaCorta(finDe(e))}${e.hora_fin ? ' ' + e.hora_fin : ''}`;
+    }
+    if (e.hora && e.hora_fin) return `${e.hora}–${e.hora_fin}`;
+    return e.hora || (e.hora_fin ? `hasta ${e.hora_fin}` : '');
+  }
+
+  // Cada evento sale en todos los días que dura (máximo 2 meses, para no colgar la pantalla)
   function porDia(lista) {
     const mapa = new Map();
     for (const e of ordenar(lista)) {
-      if (!mapa.has(e.fecha)) mapa.set(e.fecha, []);
-      mapa.get(e.fecha).push(e);
+      let d = deISO(e.fecha);
+      const fin = finDe(e);
+      for (let i = 0; i < 62 && aISO(d) <= fin; i++, d = sumarDias(d, 1)) {
+        const iso = aISO(d);
+        if (!mapa.has(iso)) mapa.set(iso, []);
+        mapa.get(iso).push(e);
+      }
     }
     return mapa;
   }
@@ -51,10 +69,12 @@ const Agenda = (() => {
   // ---------- Piezas de la pantalla ----------
   function tarjeta(e, { conFecha = false } = {}) {
     const hecha = e.estado === 'Listo';
-    const atrasada = !terminada(e) && e.fecha < hoyISO();
+    const atrasada = !terminada(e) && finDe(e) < hoyISO();
+    const varios = finDe(e) !== e.fecha;
+    const cuando = horario(e);
     const meta = [
-      conFecha ? `<span>${fechaCorta(e.fecha)}</span>` : '',
-      e.hora ? `<span>${esc(e.hora)}</span>` : '',
+      conFecha && !varios ? `<span>${fechaCorta(e.fecha)}</span>` : '',
+      cuando ? `<span>${esc(cuando)}</span>` : '',
       `<span>${esc(e.tipo)}</span>`,
       e.estado === 'En progreso' ? '<span class="etq progreso">En progreso</span>' : '',
       e.estado === 'Cancelado' ? '<span>Cancelado</span>' : '',
@@ -96,7 +116,7 @@ const Agenda = (() => {
   }
 
   function filtros() {
-    const pasadas = todas.filter(e => e.fecha < hoyISO()).length;
+    const pasadas = todas.filter(e => finDe(e) < hoyISO()).length;
     const interruptor = `<button class="chip interruptor ${estado.ocultarPasadas ? 'activo' : ''}" data-accion="pasadas" aria-pressed="${estado.ocultarPasadas}">
         ${estado.ocultarPasadas ? `Pasadas ocultas (${pasadas})` : 'Ocultar pasadas'}</button>`;
     return `<div class="filtros">${interruptor}${AMBITOS.map(a => `<button class="chip ${slug(a)} ${estado.ocultos.has(a) ? 'apagado' : ''}" data-accion="filtro" data-ambito="${esc(a)}"><i></i>${esc(a)}</button>`).join('')}</div>`;
@@ -167,7 +187,7 @@ const Agenda = (() => {
       avisar('No se ha podido cargar la agenda. Revisa la conexión.');
     }
     const hoy = hoyISO();
-    const visibles = todas.filter(e => !estado.ocultos.has(e.ambito) && !(estado.ocultarPasadas && e.fecha < hoy));
+    const visibles = todas.filter(e => !estado.ocultos.has(e.ambito) && !(estado.ocultarPasadas && finDe(e) < hoy));
     const cuerpo = { mes: vistaMes, semana: vistaSemana, tablero: vistaTablero }[estado.vista] || vistaMes;
     raiz.innerHTML = cabecera() + filtros() + cuerpo(visibles);
   }
@@ -181,8 +201,12 @@ const Agenda = (() => {
       <h2>${nueva ? 'Nueva entrada' : 'Editar entrada'}</h2>
       <label>Nombre<input name="nombre" required autocomplete="off"></label>
       <div class="fila">
-        <label>Fecha<input type="date" name="fecha" required></label>
+        <label>Empieza<input type="date" name="fecha" required></label>
         <label>Hora <small>(opcional)</small><input type="time" name="hora"></label>
+      </div>
+      <div class="fila">
+        <label>Termina <small>(opcional)</small><input type="date" name="fecha_fin"></label>
+        <label>Hora de fin <small>(opcional)</small><input type="time" name="hora_fin"></label>
       </div>
       <fieldset><legend>Ámbito</legend>
         <div class="chips-sel">${AMBITOS.map(a => `<label class="chip ${slug(a)}"><input type="radio" name="ambito" value="${esc(a)}"${a === ambito ? ' checked' : ''}><i></i>${esc(a)}</label>`).join('')}</div>
@@ -205,13 +229,24 @@ const Agenda = (() => {
     f.elements.nombre.value = e.nombre || '';
     f.elements.fecha.value = e.fecha || hoyISO();
     f.elements.hora.value = e.hora || '';
+    f.elements.fecha_fin.value = e.fecha_fin || '';
+    f.elements.hora_fin.value = e.hora_fin || '';
     f.elements.notas.value = e.notas || '';
+    // El fin no puede ser antes del inicio
+    const ajustarMin = () => { f.elements.fecha_fin.min = f.elements.fecha.value; };
+    f.elements.fecha.addEventListener('change', ajustarMin);
+    ajustarMin();
 
     f.onsubmit = async ev => {
       ev.preventDefault();
       const datos = Object.fromEntries(new FormData(f));
       datos.nombre = datos.nombre.trim();
       if (!datos.nombre) return;
+      // Un fin el mismo día que el inicio es un evento de un solo día
+      if (datos.fecha_fin && datos.fecha_fin <= datos.fecha) datos.fecha_fin = '';
+      if (!datos.fecha_fin && datos.hora && datos.hora_fin && datos.hora_fin < datos.hora) {
+        return avisar('La hora de fin es antes de la de inicio. Si acaba otro día, pon la fecha en "Termina".');
+      }
       try {
         if (nueva) await Datos.agenda.crear(datos);
         else await Datos.agenda.actualizar(e.id, datos);
