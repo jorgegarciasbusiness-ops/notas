@@ -429,6 +429,20 @@ legend { font-size: 13px; color: var(--suave); margin-bottom: 6px; padding: 0; }
 }
 .chips-sel .chip:has(input:focus-visible) { outline: 2px solid var(--acento); outline-offset: 2px; }
 .acciones { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+
+/* Rutinas (se repiten cada semana) */
+.formulario .solo-rutina { display: none; }
+.formulario.es-rutina .solo-rutina { display: flex; }
+.formulario.es-rutina span.solo-rutina { display: inline; }
+.formulario.es-rutina .solo-evento { display: none; }
+.formulario .interruptor-repite { flex-direction: row; align-items: center; gap: 8px; color: var(--texto); font-size: 14px; cursor: pointer; }
+.formulario .interruptor-repite input { width: 18px; height: 18px; accent-color: var(--acento); }
+.interruptor-repite svg, .rutina-icono svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.dias-sel { display: flex; flex-wrap: wrap; gap: 6px; }
+.formulario .dias-sel .chip { flex-direction: row; color: var(--texto); cursor: pointer; min-width: 44px; justify-content: center; }
+.dias-sel input { position: absolute; opacity: 0; width: 0; height: 0; }
+.dias-sel .chip:has(input:checked) { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
+.check.rutina-icono { border-style: dashed; color: var(--c); }
 .hueco { flex: 1; }
 
 /* ---------- Pantallas medianas ---------- */
