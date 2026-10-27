@@ -21,7 +21,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 
 ### Rutinas (se repiten cada semana)
 - Al crear una entrada, marca **"Se repite cada semana"**, elige los días (lun… dom), la hora de inicio y fin, desde cuándo y, si quieres, hasta cuándo.
-- Salen en **Mes** y **Semana** en todos los días que tocan, con el icono ↻ en vez de la casilla. En el Tablero no salen (lo llenarían).
+- En el **Mes** no llevan punto ni etiqueta: el día sale **teñido con el color de su ámbito** (así se distinguen de los eventos sueltos, que sí llevan punto). Si coinciden varias rutinas o eventos de varios días, manda el que se creó antes. En la lista del día y en la **Semana** salen como tarjeta con el icono ↻ en vez de la casilla. En el Tablero no salen (lo llenarían).
 - Al pulsar una, editas la rutina entera, la borras, o **"Quitar solo el …"** para saltarte ese día (festivo, vacaciones, un día libre).
 - Ejemplo: el horario de Led&Go (lun–jue 8:30–18:00 y vie 8:00–14:00) son dos rutinas.
 - Las rutinas no mandan avisos.
