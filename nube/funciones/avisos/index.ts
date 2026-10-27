@@ -42,15 +42,16 @@ function cuando(a: { fecha: string; hora: string | null; ambito: string }) {
   return `${dia}${hora} · ${a.ambito}`;
 }
 
+// Devuelve "" si salió bien, o el motivo del fallo (para poder ver qué contesta Apple o Google)
 async function enviar(s: { id: string; endpoint: string; p256dh: string; auth: string }, cuerpo: string) {
   try {
-    await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, cuerpo, { TTL: 3600 });
-    return true;
+    await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, cuerpo, { TTL: 3600, urgency: "high" });
+    return "";
   } catch (e) {
+    const err = e as { statusCode?: number; body?: string; message?: string };
     // El aparato ya no existe o quitó el permiso: se borra
-    const codigo = (e as { statusCode?: number }).statusCode;
-    if (codigo === 404 || codigo === 410) await sb.from("push_suscripciones").delete().eq("id", s.id);
-    return false;
+    if (err.statusCode === 404 || err.statusCode === 410) await sb.from("push_suscripciones").delete().eq("id", s.id);
+    return `${err.statusCode ?? ""} ${err.body ?? err.message ?? "error"}`.trim();
   }
 }
 
@@ -64,19 +65,23 @@ Deno.serve(async (req) => {
   if (pedido.prueba && pedido.endpoint) {
     const { data: s } = await sb.from("push_suscripciones").select("*").eq("endpoint", pedido.endpoint).maybeSingle();
     if (!s) return Response.json({ ok: false, motivo: "aparato no apuntado" }, { status: 404 });
-    const ok = await enviar(s, JSON.stringify({ titulo: "Avisos activados", texto: "Así te llegarán los recordatorios de tu agenda.", url: APP }));
-    return Response.json({ ok });
+    const fallo = await enviar(s, JSON.stringify({ titulo: "Avisos activados", texto: "Así te llegarán los recordatorios de tu agenda.", url: APP }));
+    return Response.json({ ok: !fallo, fallo });
   }
 
   const { data: avisos, error } = await sb.rpc("avisos_pendientes");
   if (error) return Response.json({ ok: false, error: error.message }, { status: 500 });
 
   let enviados = 0;
+  const fallos: string[] = [];
   for (const a of avisos ?? []) {
     const { data: subs } = await sb.from("push_suscripciones").select("*").eq("user_id", a.user_id);
     const cuerpo = JSON.stringify({ titulo: a.nombre, texto: cuando(a), url: APP, tag: a.id });
-    for (const s of subs ?? []) if (await enviar(s, cuerpo)) enviados++;
+    for (const s of subs ?? []) {
+      const fallo = await enviar(s, cuerpo);
+      if (fallo) fallos.push(fallo); else enviados++;
+    }
     await sb.from("agenda").update({ avisado_en: new Date().toISOString() }).eq("id", a.id);
   }
-  return Response.json({ ok: true, avisos: avisos?.length ?? 0, enviados });
+  return Response.json({ ok: true, avisos: avisos?.length ?? 0, enviados, fallos });
 });
