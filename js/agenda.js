@@ -43,8 +43,12 @@ const Agenda = (() => {
     return e.hora || (e.hora_fin ? `hasta ${e.hora_fin}` : '');
   }
 
-  // El evento de varios días que tiñe ese día con el color de su ámbito (el primero, si hay varios)
-  const deVariosDias = items => items.find(e => finDe(e) !== e.fecha && e.estado !== 'Cancelado');
+  // Lo que tiñe el día con el color de su ámbito: rutinas y eventos de varios días.
+  // Si coinciden varios, gana el que se creó antes.
+  const creadoDe = e => (e.rutina ? e.rutina.creado : e.creado) || '';
+  const deVariosDias = items => items
+    .filter(e => e.rutina || (finDe(e) !== e.fecha && e.estado !== 'Cancelado'))
+    .sort((a, b) => creadoDe(a).localeCompare(creadoDe(b)))[0];
 
   // Cada evento sale en todos los días que dura (máximo 2 meses, para no colgar la pantalla)
   function porDia(lista) {
@@ -182,8 +186,10 @@ const Agenda = (() => {
       const iso = aISO(d), items = dias.get(iso) || [];
       const largo = deVariosDias(items);
       const clases = ['dia', d.getMonth() !== m && 'fuera', iso === hoy && 'hoy', iso === estado.dia && 'sel', largo && `dia-evento ${slug(largo.ambito)}`].filter(Boolean).join(' ');
-      const pildoras = items.slice(0, 3).map(e => `<span class="pildora ${slug(e.ambito)} ${terminada(e) ? 'hecha' : ''}">${esc(e.nombre)}</span>`).join('');
-      const mas = items.length > 3 ? `<span class="mas">+${items.length - 3} más</span>` : '';
+      // Las rutinas no llevan punto ni etiqueta en el mes: solo tiñen el día
+      const puntuales = items.filter(e => !e.rutina);
+      const pildoras = puntuales.slice(0, 3).map(e => `<span class="pildora ${slug(e.ambito)} ${terminada(e) ? 'hecha' : ''}">${esc(e.nombre)}</span>`).join('');
+      const mas = puntuales.length > 3 ? `<span class="mas">+${puntuales.length - 3} más</span>` : '';
       celdas += `<button class="${clases}" data-accion="dia" data-fecha="${iso}"><span class="num">${d.getDate()}</span><span class="pildoras">${pildoras}${mas}</span></button>`;
     }
     return `<div class="mes-layout">
