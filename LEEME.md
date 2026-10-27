@@ -19,6 +19,13 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 - Ámbitos: Trabajo (azul), Kok$ (morado), Amor (rosa), Salud (verde), Finanzas (amarillo), Curros (naranja), **Viajes (turquesa, desde 2026-10-27)** y Personal (gris).
 - Lo atrasado (sin hacer y con fecha pasada) sale marcado en rojo.
 
+### Rutinas (se repiten cada semana)
+- Al crear una entrada, marca **"Se repite cada semana"**, elige los días (lun… dom), la hora de inicio y fin, desde cuándo y, si quieres, hasta cuándo.
+- Salen en **Mes** y **Semana** en todos los días que tocan, con el icono ↻ en vez de la casilla. En el Tablero no salen (lo llenarían).
+- Al pulsar una, editas la rutina entera, la borras, o **"Quitar solo el …"** para saltarte ese día (festivo, vacaciones, un día libre).
+- Ejemplo: el horario de Led&Go (lun–jue 8:30–18:00 y vie 8:00–14:00) son dos rutinas.
+- Las rutinas no mandan avisos.
+
 ### Avisos (notificaciones)
 - Cada evento tiene **"Avísame"**: sin aviso, a la hora, 15 min, 30 min, 1 h, 2 h o 1 día antes. Los nuevos vienen con **1 h antes**. Si no tiene hora, cuenta desde las 9:00 de ese día. Los eventos con aviso llevan una campanita.
 - Para recibirlos, pulsa **"Activar avisos"** (en el PC, abajo del menú; en el iPhone, la campana de arriba a la derecha) y acepta el permiso. Te llega uno de prueba. Hay que activarlo **en cada aparato** (el iPhone con la app en la pantalla de inicio).
@@ -87,6 +94,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 - Si se cambia algo de la base de datos: nuevo `nube/NN-*.sql`, ejecutarlo en el editor SQL de Supabase y subirlo también al repositorio.
 - Cada sector es un archivo en `js/` con `montar()` y `refrescar()`; se registra en `js/app.js` y en el menú de `index.html`. `app.js` limpia `onclick/onsubmit/onmousedown` del contenedor al cambiar de sector.
 - **Avisos**: `sw.js` (receptor de notificaciones; no guarda copias de la app) + `js/avisos.js` (botón y alta del aparato en `push_suscripciones`). La función de Supabase **avisos** (código en `nube/funciones/avisos/index.ts`, `verify_jwt` desactivado: no devuelve datos) la llama `pg_cron` cada minuto; usa `avisos_pendientes()` y marca `agenda.avisado_en`. Sus claves VAPID las creó ella misma en `push_claves` (nadie más puede leerlas). Para redesplegarla: herramienta `deploy_edge_function` del conector de Supabase.
+- Tabla `rutinas` (nombre, ambito, tipo, dias smallint[] 1=lun…7=dom, hora, hora_fin, desde, hasta, excepciones date[], notas): la Agenda las expande en el cliente para el rango visible (`deRutinas`), con id virtual `r:<id>:<fecha>`.
 - Tablas: `agenda` (con `fecha_fin` y `hora_fin` opcionales desde 2026-10-27, y `aviso_min` / `avisado_en`), `bandeja` (texto, creado), `paginas` (titulo, seccion, contenido en Markdown, orden), `gastos` (fecha, importe, concepto, categoria), `horas` (fecha, entrada, salida, horas, trabajo, nota), `ahorros` (fecha, importe, nota, objetivo_id opcional), `objetivos` (nombre, importe, fecha_limite opcional), `contenido` (pieza, fecha, redes text[], formato, tema, estado, enlace, vistas, notas), `nominas` (mes = día 1, neto; una por mes), `nomina_partidas` (mes, concepto, importe). Objetivo de ahorro (10.000 €) en `js/finanzas.js`. Koke apunta él la nómina y el reparto el primer mes; cuando se repita, el secretario puede apuntarlos (con su OK). El límite semanal (50 €) está en `js/finanzas.js`; el resumen muestra la página de sección Finanzas cuyo título empieza por "Plan". En Markdown, usar `≈` y no `~` (la virgulilla tacha texto). En `datos.js` se añaden en `TABLAS` y en el `return` de nube y local.
 - Páginas: Markdown con `marked` + `DOMPurify` (jsDelivr, versión fija). El secretario puede escribir páginas directamente en Markdown (tablas GFM, `- [ ]` casillas).
 - Iconos de la app en `iconos/`: una **K** blanca gruesa sobre azul (elegida por Koke, 2026-10-25).
