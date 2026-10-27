@@ -10,6 +10,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 - **Semana**: los 7 días de la semana, de lunes a domingo, con sus entradas.
 - **Tablero**: una columna por ámbito con todo lo pendiente, ordenado por fecha.
 - **Filtros**: los botones de colores de arriba ocultan o muestran un ámbito.
+- **Ocultar pasadas** (primer botón de los filtros, activado por defecto): esconde todo lo de días anteriores a hoy, en todas las vistas. Muestra cuántas hay ocultas; púlsalo para verlas otra vez. Se recuerda en cada aparato. El resumen de la mañana sigue avisando de lo vencido sin hacer.
 - **Crear**: botón "+ Nueva" (en el móvil, el botón azul redondo) o "+ Añadir" en un día.
 - **Editar o borrar**: pulsa una entrada.
 - **Hecho**: pulsa el cuadradito de la izquierda.
@@ -42,6 +43,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 ### Kok$
 - **Tablero**: una columna por estado (Idea → Por grabar → Grabado → Editado → Programado → Publicado). El botón **›** de cada pieza la pasa al siguiente estado.
 - **Lista**: próximas, retrasadas (fecha pasada sin publicar, en rojo) y publicadas con sus vistas.
+- **Ocultar pasadas** (activado por defecto): en Tablero y Lista esconde las piezas con fecha anterior a hoy (las que no tienen fecha se ven siempre). Púlsalo para verlas.
 - **Páginas**: Estado de Kok$, Marketing y una por lanzamiento (se editan en Páginas, sección Kok$).
 - Cada pieza: nombre, fecha, redes (TikTok, Instagram, YouTube), formato, tema, estado, vistas, enlace y notas.
 
@@ -61,7 +63,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 2. ~~Bandeja + Páginas~~ (sectores hechos el 2026-10-25).
 3. ~~Finanzas~~ (hecho el 2026-10-25: plan copiado a Páginas y los 6 turnos de octubre a Horas; el gasto semanal de Notion estaba vacío).
 4. ~~Kok$~~ (hecho el 2026-10-27: 20 piezas del calendario de contenido y 3 páginas copiadas).
-5. ~~Cambiar al secretario~~ para Finanzas, Bandeja y Revisión semanal (hecho el 2026-10-27). Falta Kok$ cuando se pase.
+5. ~~Cambiar al secretario~~ para todo (hecho el 2026-10-27). Notion queda solo como historial.
 - El **historial** (candidaturas, PROYECTOS, ALMOALB, Blaziken, Calendario viejo) se queda en Notion (plan gratis); no se pasa.
 
 
