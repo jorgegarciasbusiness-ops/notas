@@ -19,6 +19,7 @@
   --amarillo: #d4a017;
   --naranja: #e8792b;
   --gris: #8a8984;
+  --turquesa: #0e9fae;
 }
 
 /* Modo oscuro: sigue al sistema salvo que elijas uno con el botón (data-tema) */
@@ -58,6 +59,7 @@
 .amb-finanzas { --c: var(--amarillo); }
 .amb-curros   { --c: var(--naranja); }
 .amb-personal { --c: var(--gris); }
+.amb-viajes   { --c: var(--turquesa); }
 
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
@@ -218,6 +220,11 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .pildora.hecha { opacity: .5; text-decoration: line-through; }
+/* Días que ocupa un evento de varios días: teñidos con el color de su ámbito */
+.dia.dia-evento, .sem-dia.dia-evento { background: color-mix(in srgb, var(--c) 18%, var(--panel)); }
+.dia.dia-evento:hover { background: color-mix(in srgb, var(--c) 26%, var(--panel)); }
+.sem-dia.dia-evento { border-color: color-mix(in srgb, var(--c) 45%, var(--linea)); }
+.sem-dia.dia-evento .tarjeta { background: var(--panel); }
 .mas { font-size: 11px; color: var(--suave); padding-left: 4px; }
 
 /* ---------- Vista de semana ---------- */
