@@ -17,8 +17,11 @@ const Koks = (() => {
   const retrasada = p => p.fecha && p.fecha < hoyISO() && p.estado !== 'Publicado';
   const ordenar = l => [...l].sort((a, b) => (a.fecha || '9999').localeCompare(b.fecha || '9999'));
 
-  let raiz, dlg, piezas = [], paginas = [];
+  let raiz, dlg, todas = [], piezas = [], paginas = [];
   let vista = 'tablero';
+  // Ocultar las piezas de días anteriores a hoy (se recuerda en cada aparato; por defecto, ocultas)
+  let ocultarPasadas = true;
+  try { ocultarPasadas = localStorage.getItem('notas.koks.pasadas') !== 'ver'; } catch { /* sin memoria */ }
 
   // ---------- Piezas de la pantalla ----------
   function tarjeta(p, { siguiente = false } = {}) {
@@ -80,16 +83,22 @@ const Koks = (() => {
 
   async function render() {
     try {
-      [piezas, paginas] = await Promise.all([Datos.contenido.listar(), Datos.paginas.listar()]);
+      [todas, paginas] = await Promise.all([Datos.contenido.listar(), Datos.paginas.listar()]);
     } catch {
       avisar('No se ha podido cargar Kok$. Revisa la conexión.');
     }
+    const hoy = hoyISO();
+    const pasadas = todas.filter(p => p.fecha && p.fecha < hoy).length;
+    piezas = ocultarPasadas ? todas.filter(p => !p.fecha || p.fecha >= hoy) : todas;
     const boton = (v, t) => `<button class="${vista === v ? 'activo' : ''}" data-accion="vista" data-vista="${v}">${t}</button>`;
     const cuerpo = { tablero: vistaTablero, lista: vistaLista, paginas: vistaPaginas }[vista]();
+    const filtro = vista === 'paginas' ? '' : `<div class="filtros">
+        <button class="chip interruptor ${ocultarPasadas ? 'activo' : ''}" data-accion="pasadas" aria-pressed="${ocultarPasadas}">${ocultarPasadas ? `Pasadas ocultas (${pasadas})` : 'Ocultar pasadas'}</button>
+      </div>`;
     raiz.innerHTML = `<header class="ag-cab"><h1>Kok$</h1>
         <div class="segmentado">${boton('tablero', 'Tablero')}${boton('lista', 'Lista')}${boton('paginas', 'Páginas')}</div>
         <button class="btn primario nueva" data-accion="nueva" aria-label="Nueva pieza"><b>+</b> <span>Pieza</span></button>
-      </header>${cuerpo}`;
+      </header>${filtro}${cuerpo}`;
   }
 
   // ---------- Formulario ----------
@@ -181,6 +190,10 @@ const Koks = (() => {
     const { accion, id } = b.dataset;
     switch (accion) {
       case 'vista': vista = b.dataset.vista; break;
+      case 'pasadas':
+        ocultarPasadas = !ocultarPasadas;
+        try { localStorage.setItem('notas.koks.pasadas', ocultarPasadas ? 'ocultar' : 'ver'); } catch { /* sin memoria */ }
+        break;
       case 'nueva': return abrir();
       case 'editar': return abrir(piezas.find(p => p.id === id));
       case 'avanzar': {

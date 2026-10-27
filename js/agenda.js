@@ -45,7 +45,8 @@ const Agenda = (() => {
 
   // ---------- Estado de la pantalla ----------
   let raiz, dlg, todas = [];
-  const estado = { vista: recordar('vista') || 'mes', ref: new Date(), dia: hoyISO(), ocultos: new Set() };
+  // ocultarPasadas: no enseña lo de días anteriores a hoy (se recuerda en cada aparato)
+  const estado = { vista: recordar('vista') || 'mes', ref: new Date(), dia: hoyISO(), ocultos: new Set(), ocultarPasadas: recordar('pasadas') !== 'ver' };
 
   // ---------- Piezas de la pantalla ----------
   function tarjeta(e, { conFecha = false } = {}) {
@@ -95,7 +96,10 @@ const Agenda = (() => {
   }
 
   function filtros() {
-    return `<div class="filtros">${AMBITOS.map(a => `<button class="chip ${slug(a)} ${estado.ocultos.has(a) ? 'apagado' : ''}" data-accion="filtro" data-ambito="${esc(a)}"><i></i>${esc(a)}</button>`).join('')}</div>`;
+    const pasadas = todas.filter(e => e.fecha < hoyISO()).length;
+    const interruptor = `<button class="chip interruptor ${estado.ocultarPasadas ? 'activo' : ''}" data-accion="pasadas" aria-pressed="${estado.ocultarPasadas}">
+        ${estado.ocultarPasadas ? `Pasadas ocultas (${pasadas})` : 'Ocultar pasadas'}</button>`;
+    return `<div class="filtros">${interruptor}${AMBITOS.map(a => `<button class="chip ${slug(a)} ${estado.ocultos.has(a) ? 'apagado' : ''}" data-accion="filtro" data-ambito="${esc(a)}"><i></i>${esc(a)}</button>`).join('')}</div>`;
   }
 
   function panelDia(iso, items) {
@@ -162,7 +166,8 @@ const Agenda = (() => {
     } catch {
       avisar('No se ha podido cargar la agenda. Revisa la conexión.');
     }
-    const visibles = todas.filter(e => !estado.ocultos.has(e.ambito));
+    const hoy = hoyISO();
+    const visibles = todas.filter(e => !estado.ocultos.has(e.ambito) && !(estado.ocultarPasadas && e.fecha < hoy));
     const cuerpo = { mes: vistaMes, semana: vistaSemana, tablero: vistaTablero }[estado.vista] || vistaMes;
     raiz.innerHTML = cabecera() + filtros() + cuerpo(visibles);
   }
@@ -255,6 +260,10 @@ const Agenda = (() => {
         break;
       case 'filtro':
         if (estado.ocultos.has(ambito)) estado.ocultos.delete(ambito); else estado.ocultos.add(ambito);
+        break;
+      case 'pasadas':
+        estado.ocultarPasadas = !estado.ocultarPasadas;
+        recordar('pasadas', estado.ocultarPasadas ? 'ocultar' : 'ver');
         break;
       case 'check': {
         const e = todas.find(x => x.id === id);
