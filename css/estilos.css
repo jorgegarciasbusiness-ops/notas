@@ -159,6 +159,10 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
 }
 .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
 .chip.apagado { opacity: .45; }
+.chip.interruptor { color: var(--suave); }
+.chip.interruptor::before { content: ""; width: 10px; height: 10px; border-radius: 3px; border: 1.5px solid currentColor; flex: none; }
+.chip.interruptor.activo { color: var(--acento); border-color: var(--acento); background: color-mix(in srgb, var(--acento) 10%, var(--panel)); font-weight: 600; }
+.chip.interruptor.activo::before { background: currentColor; }
 .chip.apagado i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
 
 /* ---------- Tarjetas de entrada ---------- */
