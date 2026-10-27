@@ -13,6 +13,7 @@ const Agenda = (() => {
   // Avisos: minutos antes del inicio ('' = sin aviso). Por defecto, 1 h antes (decisión de Koke, 2026-10-28)
   const AVISOS = [['', 'Sin aviso'], [0, 'A la hora'], [15, '15 min antes'], [30, '30 min antes'], [60, '1 h antes'], [120, '2 h antes'], [1440, '1 día antes']];
   const AVISO_POR_DEFECTO = 60;
+  const REPITE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11a7 7 0 0 1 12-4.9L19 9M19 4v5h-5M20 13a7 7 0 0 1-12 4.9L5 15M5 20v-5h5"/></svg>';
 
   // ---------- Utilidades de fechas y texto ----------
   const pad = n => String(n).padStart(2, '0');
@@ -68,14 +69,44 @@ const Agenda = (() => {
   }
 
   // ---------- Estado de la pantalla ----------
-  let raiz, dlg, todas = [];
+  let raiz, dlg, todas = [], rutinas = [];
+
+  // Las rutinas no se guardan día a día: se dibujan en cada día que toca dentro de lo que se ve
+  function deRutinas(desde, hasta) {
+    const salida = [];
+    for (const r of rutinas) {
+      for (let d = deISO(desde); aISO(d) <= hasta; d = sumarDias(d, 1)) {
+        const iso = aISO(d);
+        const diaSemana = (d.getDay() + 6) % 7 + 1;  // 1 = lunes … 7 = domingo
+        if (!(r.dias || []).map(Number).includes(diaSemana) || iso < r.desde || (r.hasta && iso > r.hasta) || (r.excepciones || []).includes(iso)) continue;
+        salida.push({
+          id: `r:${r.id}:${iso}`, rutina: r, nombre: r.nombre, fecha: iso, fecha_fin: '', hora: r.hora, hora_fin: r.hora_fin,
+          ambito: r.ambito, tipo: r.tipo, prioridad: 'Media', estado: 'Sin empezar', notas: r.notas, aviso_min: '',
+        });
+      }
+    }
+    return salida;
+  }
+
+  // Días que se ven en pantalla (el tablero no enseña rutinas: llenarían las columnas)
+  function rangoVisible() {
+    if (estado.vista === 'mes') {
+      const y = estado.ref.getFullYear(), m = estado.ref.getMonth();
+      return [aISO(lunesDe(new Date(y, m, 1))), aISO(sumarDias(lunesDe(new Date(y, m + 1, 0)), 6))];
+    }
+    if (estado.vista === 'semana') {
+      const l = lunesDe(estado.ref);
+      return [aISO(l), aISO(sumarDias(l, 6))];
+    }
+    return null;
+  }
   // ocultarPasadas: no enseña lo de días anteriores a hoy (se recuerda en cada aparato)
   const estado = { vista: recordar('vista') || 'mes', ref: new Date(), dia: hoyISO(), ocultos: new Set(), ocultarPasadas: recordar('pasadas') !== 'ver' };
 
   // ---------- Piezas de la pantalla ----------
   function tarjeta(e, { conFecha = false } = {}) {
     const hecha = e.estado === 'Listo';
-    const atrasada = !terminada(e) && finDe(e) < hoyISO();
+    const atrasada = !e.rutina && !terminada(e) && finDe(e) < hoyISO();
     const varios = finDe(e) !== e.fecha;
     const cuando = horario(e);
     const meta = [
@@ -89,7 +120,9 @@ const Agenda = (() => {
       atrasada ? '<span class="etq atrasada">Atrasada</span>' : '',
     ].join('');
     return `<div class="tarjeta ${slug(e.ambito)} ${hecha ? 'hecha' : ''} ${e.estado === 'Cancelado' ? 'cancelada' : ''}">
-      <button class="check" data-accion="check" data-id="${e.id}" aria-label="${hecha ? 'Marcar como pendiente' : 'Marcar como hecha'}">${hecha ? '✓' : ''}</button>
+      ${e.rutina
+        ? `<span class="check rutina-icono" title="Se repite cada semana">${REPITE}</span>`
+        : `<button class="check" data-accion="check" data-id="${e.id}" aria-label="${hecha ? 'Marcar como pendiente' : 'Marcar como hecha'}">${hecha ? '✓' : ''}</button>`}
       <button class="tarjeta-cuerpo" data-accion="editar" data-id="${e.id}">
         <span class="t-nombre">${esc(e.nombre)}</span>
         <span class="t-meta">${meta}</span>
@@ -191,48 +224,61 @@ const Agenda = (() => {
 
   async function render() {
     try {
-      todas = await Datos.agenda.listar();
+      [todas, rutinas] = await Promise.all([Datos.agenda.listar(), Datos.rutinas.listar()]);
     } catch {
       avisar('No se ha podido cargar la agenda. Revisa la conexión.');
     }
     const hoy = hoyISO();
-    const visibles = todas.filter(e => !estado.ocultos.has(e.ambito) && !(estado.ocultarPasadas && finDe(e) < hoy));
+    const rango = rangoVisible();
+    const lista = rango ? todas.concat(deRutinas(...rango)) : todas;
+    const visibles = lista.filter(e =>!estado.ocultos.has(e.ambito) && !(estado.ocultarPasadas && finDe(e) < hoy));
     const cuerpo = { mes: vistaMes, semana: vistaSemana, tablero: vistaTablero }[estado.vista] || vistaMes;
     raiz.innerHTML = cabecera() + filtros() + cuerpo(visibles);
   }
 
   // ---------- Formulario de crear / editar ----------
+  // e puede ser una entrada normal, una nueva ({fecha, ambito}) o una rutina ({esRutina: true, …, diaPulsado})
   function abrirFormulario(e) {
     const nueva = !e.id;
+    const esRutina = !!e.esRutina;
     const opciones = (lista, actual) => lista.map(v => `<option${v === actual ? ' selected' : ''}>${esc(v)}</option>`).join('');
     const ambito = e.ambito || 'Personal';
     const aviso = nueva ? AVISO_POR_DEFECTO : (e.aviso_min ?? '');
-    dlg.innerHTML = `<form class="formulario">
-      <h2>${nueva ? 'Nueva entrada' : 'Editar entrada'}</h2>
+    // Por defecto, una rutina nueva se repite el mismo día de la semana que la fecha elegida
+    const dias = esRutina ? e.dias.map(Number) : [(deISO(e.fecha || hoyISO()).getDay() + 6) % 7 + 1];
+    const titulo = esRutina ? 'Editar rutina' : nueva ? 'Nueva entrada' : 'Editar entrada';
+    dlg.innerHTML = `<form class="formulario ${esRutina ? 'es-rutina' : ''}">
+      <h2>${titulo}</h2>
       <label>Nombre<input name="nombre" required autocomplete="off"></label>
+      ${nueva || esRutina ? `<label class="interruptor-repite"><input type="checkbox" name="repite"${esRutina ? ' checked disabled' : ''}> ${REPITE} Se repite cada semana</label>
+      <div class="solo-rutina">
+        <div class="dias-sel" role="group" aria-label="Días">${DIAS_CORTOS.map((d, i) => `<label class="chip"><input type="checkbox" name="dias" value="${i + 1}"${dias.includes(i + 1) ? ' checked' : ''}>${d}</label>`).join('')}</div>
+      </div>` : ''}
       <div class="fila">
-        <label>Empieza<input type="date" name="fecha" required></label>
+        <label><span class="solo-evento">Empieza</span><span class="solo-rutina">Desde</span><input type="date" name="fecha" required></label>
         <label>Hora <small>(opcional)</small><input type="time" name="hora"></label>
       </div>
       <div class="fila">
-        <label>Termina <small>(opcional)</small><input type="date" name="fecha_fin"></label>
+        <label class="solo-evento">Termina <small>(opcional)</small><input type="date" name="fecha_fin"></label>
+        <label class="solo-rutina">Hasta <small>(vacío = siempre)</small><input type="date" name="hasta"></label>
         <label>Hora de fin <small>(opcional)</small><input type="time" name="hora_fin"></label>
       </div>
       <fieldset><legend>Ámbito</legend>
         <div class="chips-sel">${AMBITOS.map(a => `<label class="chip ${slug(a)}"><input type="radio" name="ambito" value="${esc(a)}"${a === ambito ? ' checked' : ''}><i></i>${esc(a)}</label>`).join('')}</div>
       </fieldset>
       <div class="fila">
-        <label>Tipo<select name="tipo">${opciones(TIPOS, e.tipo || 'Tarea')}</select></label>
-        <label>Prioridad<select name="prioridad">${opciones(PRIORIDADES, e.prioridad || 'Media')}</select></label>
+        <label>Tipo<select name="tipo">${opciones(TIPOS, e.tipo || (esRutina ? 'Evento Personal' : 'Tarea'))}</select></label>
+        <label class="solo-evento">Prioridad<select name="prioridad">${opciones(PRIORIDADES, e.prioridad || 'Media')}</select></label>
       </div>
-      <div class="fila">
+      <div class="fila solo-evento">
         <label>Estado<select name="estado">${opciones(ESTADOS, e.estado || 'Sin empezar')}</select></label>
         <label>Avísame<select name="aviso_min">${AVISOS.map(([v, t]) => `<option value="${v}"${String(v) === String(aviso) ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
       </div>
-      <p class="ayuda">Si no tiene hora, el aviso cuenta desde las 9:00 de ese día.</p>
+      <p class="ayuda solo-evento">Si no tiene hora, el aviso cuenta desde las 9:00 de ese día.</p>
       <label>Notas<textarea name="notas" rows="3"></textarea></label>
+      ${esRutina && e.diaPulsado ? `<button type="button" class="btn" data-f="saltar">Quitar solo el ${fechaCorta(e.diaPulsado)}</button>` : ''}
       <div class="acciones">
-        ${nueva ? '' : '<button type="button" class="btn peligro" data-f="borrar">Borrar</button>'}
+        ${nueva ? '' : `<button type="button" class="btn peligro" data-f="borrar">${esRutina ? 'Borrar rutina' : 'Borrar'}</button>`}
         <span class="hueco"></span>
         <button type="button" class="btn" data-f="cancelar">Cancelar</button>
         <button type="submit" class="btn primario">Guardar</button>
@@ -245,15 +291,20 @@ const Agenda = (() => {
     f.elements.hora.value = e.hora || '';
     f.elements.fecha_fin.value = e.fecha_fin || '';
     f.elements.hora_fin.value = e.hora_fin || '';
+    f.elements.hasta.value = e.hasta || '';
     f.elements.notas.value = e.notas || '';
     // El fin no puede ser antes del inicio
-    const ajustarMin = () => { f.elements.fecha_fin.min = f.elements.fecha.value; };
+    const ajustarMin = () => { f.elements.fecha_fin.min = f.elements.hasta.min = f.elements.fecha.value; };
     f.elements.fecha.addEventListener('change', ajustarMin);
     ajustarMin();
+    // "Se repite" cambia el formulario de entrada a rutina
+    if (f.elements.repite) f.elements.repite.onchange = () => f.classList.toggle('es-rutina', f.elements.repite.checked);
 
     f.onsubmit = async ev => {
       ev.preventDefault();
+      if (f.classList.contains('es-rutina')) return guardarRutina(f, e);
       const datos = Object.fromEntries(new FormData(f));
+      delete datos.repite; delete datos.dias; delete datos.hasta;
       datos.nombre = datos.nombre.trim();
       // Si cambia cuándo es o el aviso, el aviso vuelve a quedar pendiente
       if (nueva || datos.fecha !== e.fecha || datos.hora !== (e.hora || '') || String(datos.aviso_min) !== String(e.aviso_min ?? '')) {
@@ -278,11 +329,23 @@ const Agenda = (() => {
     f.querySelector('[data-f=cancelar]').onclick = () => dlg.close();
     const borrar = f.querySelector('[data-f=borrar]');
     if (borrar) borrar.onclick = async () => {
-      if (!confirm(`¿Borrar «${e.nombre}»?`)) return;
+      const pregunta = esRutina ? `¿Borrar la rutina «${e.nombre}» entera (todos los días)?` : `¿Borrar «${e.nombre}»?`;
+      if (!confirm(pregunta)) return;
       try {
-        await Datos.agenda.borrar(e.id);
+        await (esRutina ? Datos.rutinas : Datos.agenda).borrar(e.id);
       } catch {
         return avisar('No se ha podido borrar. Revisa la conexión.');
+      }
+      dlg.close();
+      render();
+    };
+    // Rutina: saltarse un día suelto (festivo, vacaciones…) sin tocar los demás
+    const saltar = f.querySelector('[data-f=saltar]');
+    if (saltar) saltar.onclick = async () => {
+      try {
+        await Datos.rutinas.actualizar(e.id, { excepciones: [...(e.excepciones || []), e.diaPulsado] });
+      } catch {
+        return avisar('No se ha podido guardar. Revisa la conexión.');
       }
       dlg.close();
       render();
@@ -290,6 +353,33 @@ const Agenda = (() => {
 
     dlg.showModal();
     if (nueva) f.elements.nombre.focus();
+  }
+
+  async function guardarRutina(f, e) {
+    const x = f.elements;
+    const datos = {
+      nombre: x.nombre.value.trim(),
+      ambito: f.querySelector('input[name=ambito]:checked')?.value || 'Personal',
+      tipo: x.tipo.value,
+      dias: [...f.querySelectorAll('input[name=dias]:checked')].map(c => Number(c.value)),
+      hora: x.hora.value,
+      hora_fin: x.hora_fin.value,
+      desde: x.fecha.value,
+      hasta: x.hasta.value,
+      notas: x.notas.value,
+    };
+    if (!datos.nombre) return;
+    if (!datos.dias.length) return avisar('Elige al menos un día de la semana.');
+    if (datos.hora && datos.hora_fin && datos.hora_fin < datos.hora) return avisar('La hora de fin es antes de la de inicio.');
+    if (datos.hasta && datos.hasta < datos.desde) return avisar('"Hasta" no puede ser antes de "Desde".');
+    try {
+      if (e.esRutina) await Datos.rutinas.actualizar(e.id, datos);
+      else await Datos.rutinas.crear(datos);
+    } catch {
+      return avisar('No se ha podido guardar. Revisa la conexión y vuelve a probar.');
+    }
+    dlg.close();
+    render();
   }
 
   // ---------- Qué pasa al pulsar ----------
@@ -327,7 +417,14 @@ const Agenda = (() => {
         }
         break;
       }
-      case 'editar': return abrirFormulario(todas.find(x => x.id === id));
+      case 'editar': {
+        if (id.startsWith('r:')) {
+          const [, rutinaId, dia] = id.split(':');
+          const r = rutinas.find(x => x.id === rutinaId);
+          return abrirFormulario({ ...r, esRutina: true, fecha: r.desde, diaPulsado: dia });
+        }
+        return abrirFormulario(todas.find(x => x.id === id));
+      }
       case 'nueva': return abrirFormulario({ fecha: fecha || (estado.vista === 'mes' ? estado.dia : hoyISO()), ambito });
       default: return;
     }
