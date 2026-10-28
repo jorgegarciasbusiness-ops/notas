@@ -123,7 +123,8 @@ const Agenda = (() => {
       e.prioridad === 'Alta' && !terminada(e) ? '<span class="etq alta">Alta</span>' : '',
       atrasada ? '<span class="etq atrasada">Atrasada</span>' : '',
     ].join('');
-    return `<div class="tarjeta ${slug(e.ambito)} ${hecha ? 'hecha' : ''} ${e.estado === 'Cancelado' ? 'cancelada' : ''}">
+    // Las rutinas no se arrastran: se repiten solas
+    return `<div class="tarjeta ${slug(e.ambito)} ${hecha ? 'hecha' : ''} ${e.estado === 'Cancelado' ? 'cancelada' : ''}"${e.rutina ? '' : ` data-arrastre="${e.id}"`}>
       ${e.rutina
         ? `<span class="check rutina-icono" title="Se repite cada semana">${REPITE}</span>`
         : `<button class="check" data-accion="check" data-id="${e.id}" aria-label="${hecha ? 'Marcar como pendiente' : 'Marcar como hecha'}">${hecha ? '✓' : ''}</button>`}
@@ -188,9 +189,9 @@ const Agenda = (() => {
       const clases = ['dia', d.getMonth() !== m && 'fuera', iso === hoy && 'hoy', iso === estado.dia && 'sel', largo && `dia-evento ${slug(largo.ambito)}`].filter(Boolean).join(' ');
       // Las rutinas no llevan punto ni etiqueta en el mes: solo tiñen el día
       const puntuales = items.filter(e => !e.rutina);
-      const pildoras = puntuales.slice(0, 3).map(e => `<span class="pildora ${slug(e.ambito)} ${terminada(e) ? 'hecha' : ''}">${esc(e.nombre)}</span>`).join('');
+      const pildoras = puntuales.slice(0, 3).map(e => `<span class="pildora ${slug(e.ambito)} ${terminada(e) ? 'hecha' : ''}" data-arrastre="${e.id}">${esc(e.nombre)}</span>`).join('');
       const mas = puntuales.length > 3 ? `<span class="mas">+${puntuales.length - 3} más</span>` : '';
-      celdas += `<button class="${clases}" data-accion="dia" data-fecha="${iso}"><span class="num">${d.getDate()}</span><span class="pildoras">${pildoras}${mas}</span></button>`;
+      celdas += `<button class="${clases}" data-accion="dia" data-fecha="${iso}" data-soltar="${iso}"><span class="num">${d.getDate()}</span><span class="pildoras">${pildoras}${mas}</span></button>`;
     }
     return `<div class="mes-layout">
       <div class="mes">
@@ -207,7 +208,7 @@ const Agenda = (() => {
     for (let i = 0; i < 7; i++) {
       const d = sumarDias(lunes, i), iso = aISO(d), items = dias.get(iso) || [];
       const largo = deVariosDias(items);
-      html += `<section class="sem-dia ${iso === hoy ? 'hoy' : ''} ${largo ? `dia-evento ${slug(largo.ambito)}` : ''}">
+      html += `<section class="sem-dia ${iso === hoy ? 'hoy' : ''} ${largo ? `dia-evento ${slug(largo.ambito)}` : ''}" data-soltar="${iso}">
         <header><span>${DIAS_CORTOS[i]}</span><b>${d.getDate()}</b></header>
         ${items.map(e => tarjeta(e)).join('')}
         <button class="anadir" data-accion="nueva" data-fecha="${iso}">+ Añadir</button>
@@ -396,7 +397,7 @@ const Agenda = (() => {
 
   async function alPulsar(ev) {
     const b = ev.target.closest('[data-accion]');
-    if (!b || !raiz.contains(b)) return;
+    if (!b || !raiz.contains(b) || Date.now() < ignorarClicHasta) return;  // soltar lo arrastrado no cuenta como pulsar
     const { accion, id, fecha, vista, ambito } = b.dataset;
     switch (accion) {
       case 'vista': estado.vista = vista; recordar('vista', vista); break;
@@ -437,9 +438,130 @@ const Agenda = (() => {
     render();
   }
 
+  // ---------- Arrastrar a otro día (Mes y Semana) ----------
+  // Ratón: se coge al moverlo un poco. Dedo: manteniendo pulsado medio segundo, para no estorbar al deslizar la pantalla.
+  let arrastre = null, ignorarClicHasta = 0, escuchando = false;
+  const destinoEn = (x, y) => document.elementFromPoint(x, y)?.closest('[data-soltar]');
+
+  function coger(el, x, y, dedo) {
+    if (!estado.vista || estado.vista === 'tablero') return;
+    // Si se coge en un día concreto se mueve desde ese día (cuenta para los de varios días); si no, desde el día del panel
+    const origen = el.closest('[data-soltar]')?.dataset.soltar || estado.dia;
+    arrastre = { el, id: el.dataset.arrastre, origen, x0: x, y0: y, x, y, activo: false };
+    if (dedo) arrastre.espera = setTimeout(activar, 450);
+  }
+
+  function activar() {
+    const a = arrastre;
+    if (!a) return;
+    a.activo = true;
+    const caja = a.el.getBoundingClientRect();
+    a.fantasma = a.el.cloneNode(true);
+    a.fantasma.className += ' fantasma';
+    a.fantasma.style.width = Math.max(caja.width, 120) + 'px';
+    document.body.appendChild(a.fantasma);
+    a.el.classList.add('arrastrando');
+    navigator.vibrate?.(15);
+    seguir(a.x, a.y);
+    // Si el dedo o el ratón se acercan al borde de arriba o de abajo, la pantalla se desliza sola
+    const desplazar = () => {
+      if (arrastre !== a || !a.activo) return;
+      const margen = 70;
+      if (a.y < margen) scrollBy(0, -12);
+      else if (a.y > innerHeight - margen) scrollBy(0, 12);
+      requestAnimationFrame(desplazar);
+    };
+    requestAnimationFrame(desplazar);
+  }
+
+  function seguir(x, y) {
+    const a = arrastre;
+    a.x = x; a.y = y;
+    if (!a.activo) return;
+    a.fantasma.style.transform = `translate(${x + 8}px, ${y + 8}px)`;
+    const destino = destinoEn(x, y);
+    if (destino !== a.destino) {
+      a.destino?.classList.remove('destino');
+      destino?.classList.add('destino');
+      a.destino = destino;
+    }
+  }
+
+  function terminarArrastre() {
+    const a = arrastre;
+    arrastre = null;
+    if (!a) return null;
+    clearTimeout(a.espera);
+    a.fantasma?.remove();
+    a.el.classList.remove('arrastrando');
+    a.destino?.classList.remove('destino');
+    return a.activo ? a : null;
+  }
+
+  async function soltar() {
+    const a = terminarArrastre();
+    if (!a) return;
+    ignorarClicHasta = Date.now() + 400;
+    const destino = a.destino?.dataset.soltar;
+    const e = todas.find(x => x.id === a.id);
+    if (!destino || !e || destino === a.origen) return;
+    // Se mueve entero: mismo desplazamiento para el inicio y el fin, y misma hora
+    const dias = Math.round((deISO(destino) - deISO(a.origen)) / 864e5);
+    const cambios = { fecha: aISO(sumarDias(deISO(e.fecha), dias)), avisado_en: null };
+    if (e.fecha_fin) cambios.fecha_fin = aISO(sumarDias(deISO(e.fecha_fin), dias));
+    try {
+      await Datos.agenda.actualizar(e.id, cambios);
+    } catch {
+      return avisar('No se ha podido mover. Revisa la conexión.');
+    }
+    estado.dia = destino;
+    render();
+  }
+
+  function escucharArrastre() {
+    if (escuchando) return;
+    escuchando = true;
+    // Ratón
+    raiz.addEventListener('pointerdown', ev => {
+      if (ev.pointerType !== 'mouse' || ev.button !== 0) return;
+      const el = ev.target.closest('[data-arrastre]');
+      if (el && raiz.contains(el)) coger(el, ev.clientX, ev.clientY, false);
+    });
+    addEventListener('pointermove', ev => {
+      if (!arrastre || ev.pointerType !== 'mouse') return;
+      if (!arrastre.activo && Math.hypot(ev.clientX - arrastre.x0, ev.clientY - arrastre.y0) > 6) activar();
+      if (arrastre) seguir(ev.clientX, ev.clientY);
+    });
+    addEventListener('pointerup', ev => { if (ev.pointerType === 'mouse') soltar(); });
+    // Dedo
+    raiz.addEventListener('touchstart', ev => {
+      const el = ev.target.closest('[data-arrastre]');
+      if (ev.touches.length !== 1 || !el || !raiz.contains(el)) return terminarArrastre();
+      const t = ev.touches[0];
+      coger(el, t.clientX, t.clientY, true);
+    }, { passive: true });
+    raiz.addEventListener('touchmove', ev => {
+      if (!arrastre) return;
+      const t = ev.touches[0];
+      if (arrastre.activo) {
+        ev.preventDefault();  // mientras se arrastra, la pantalla no se desliza
+        seguir(t.clientX, t.clientY);
+      } else if (Math.hypot(t.clientX - arrastre.x0, t.clientY - arrastre.y0) > 10) {
+        terminarArrastre();  // estaba deslizando la pantalla, no arrastrando
+      }
+    }, { passive: false });
+    raiz.addEventListener('touchend', ev => {
+      if (arrastre?.activo) ev.preventDefault();  // que no cuente además como pulsar
+      soltar();
+    });
+    raiz.addEventListener('touchcancel', terminarArrastre);
+    raiz.addEventListener('contextmenu', ev => { if (arrastre) ev.preventDefault(); });
+  }
+
   function montar(contenedor) {
     raiz = contenedor;
     dlg = document.getElementById('dialogo');
+    escucharArrastre();
     raiz.onclick = alPulsar;
     dlg.onclick = ev => { if (ev.target === dlg) dlg.close(); };
     render();
