@@ -245,6 +245,18 @@ body.sin-sesion .sectores { position: fixed; inset: 0 0 auto auto; height: auto;
 .sem-dia .t-nombre { font-size: 14px; }
 .sem-dia .anadir { margin-top: auto; }
 
+/* ---------- Arrastrar a otro día ---------- */
+[data-arrastre] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.arrastrando { opacity: .35; }
+.fantasma {
+  position: fixed; top: 0; left: 0; z-index: 1000; pointer-events: none;
+  box-shadow: var(--sombra); opacity: .95;
+}
+.tarjeta.fantasma { background: var(--panel); }
+.pildora.fantasma { width: auto !important; height: auto; max-width: 220px; padding: 2px 8px; font-size: 12px; border-radius: 4px; background: var(--panel); border-left: 3px solid var(--c); }
+.dia.destino, .sem-dia.destino { box-shadow: inset 0 0 0 2px var(--acento); background: color-mix(in srgb, var(--acento) 12%, var(--panel)); }
+body:has(.fantasma), body:has(.fantasma) * { cursor: grabbing !important; }
+
 /* ---------- Tablero por ámbito ---------- */
 .tablero {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr);
