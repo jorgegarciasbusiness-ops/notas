@@ -22,7 +22,6 @@ const Datos = (() => {
     nomina_partidas: { orden: 'creado', actualizado: true },
     objetivos: { orden: 'creado', actualizado: true },
     contenido: { orden: 'fecha', actualizado: true },
-    rutinas: { orden: 'creado', actualizado: true },
   };
   // Horas tipo "08:00" o vacío; en la nube vacío es "nada"
   const hhmm = h => (h ? String(h).slice(0, 5) : '');
@@ -41,7 +40,7 @@ const Datos = (() => {
       // No ha cargado la pieza de Supabase (sin internet): se pide entrar y avisa del fallo
       const sinConexion = async () => { throw new Error('sin conexión'); };
       const vacia = { listar: sinConexion, crear: sinConexion, actualizar: sinConexion, borrar: sinConexion };
-      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, ahorros: vacia, nominas: vacia, nomina_partidas: vacia, objetivos: vacia, contenido: vacia, rutinas: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
+      return { modo: 'nube', agenda: vacia, bandeja: vacia, paginas: vacia, gastos: vacia, horas: vacia, ahorros: vacia, nominas: vacia, nomina_partidas: vacia, objetivos: vacia, contenido: vacia, sesion: sinConexion, entrar: sinConexion, salir: async () => {} };
     }
     const sb = supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseClave);
     const comprobar = ({ data, error }) => { if (error) throw error; return data; };
@@ -81,10 +80,6 @@ const Datos = (() => {
           if ('aviso_min' in x) x.aviso_min = x.aviso_min === '' || x.aviso_min == null ? null : Number(x.aviso_min);
           return x;
         },
-      }),
-      rutinas: tabla('rutinas', {
-        limpiar: f => ({ ...f, hora: hhmm(f.hora), hora_fin: hhmm(f.hora_fin), hasta: f.hasta || '', dias: f.dias || [], excepciones: f.excepciones || [], notas: f.notas || '' }),
-        preparar: d => horaONada(d, ['hora', 'hora_fin', 'hasta']),
       }),
       // Avisos: aparatos que reciben notificaciones y la función de la nube que las manda
       push: {
@@ -143,6 +138,9 @@ const Datos = (() => {
       agenda: () => [
         ['Revisar el contrato', 'Trabajo', 'Tarea', 'Alta', 'Sin empezar', 0, '18:00'],
         ['Primer día de trabajo', 'Trabajo', 'Evento Personal', 'Alta', 'Sin empezar', 2, '09:00'],
+        ['Turno Led&Go', 'Trabajo', 'Evento Personal', 'Media', 'Sin empezar', 0, '08:30'],
+        ['Turno Led&Go', 'Trabajo', 'Evento Personal', 'Media', 'Sin empezar', 1, '08:30'],
+        ['Turno Led&Go', 'Trabajo', 'Evento Personal', 'Media', 'Sin empezar', 2, '08:00'],
         ['Entreno: pierna', 'Salud', 'Tarea', 'Media', 'Listo', -1, '10:00'],
         ['Entreno: torso', 'Salud', 'Tarea', 'Media', 'Sin empezar', 1, '19:30'],
         ['Elegir portada del próximo single', 'Kok$', 'Tarea', 'Alta', 'Sin empezar', -2, ''],
@@ -188,10 +186,6 @@ const Datos = (() => {
         ['Fragmento nuevo · tema de amor', 3, ['TikTok'], 'Fragmento nuevo', 'Idea', ''],
         ['Reel de la semana', 5, ['Instagram'], 'Otro', 'Programado', ''],
       ].map(([pieza, n, redes, formato, estado, vistas]) => ({ id: nuevoId(), pieza, fecha: dia(n), redes, formato, tema: '', estado, enlace: '', vistas, notas: '', creado: ahora(), actualizado: ahora() })),
-      rutinas: () => [
-        ['Trabajo', [1, 2, 3, 4], '08:30', '18:00'],
-        ['Trabajo', [5], '08:00', '14:00'],
-      ].map(([nombre, dias, hora, hora_fin]) => ({ id: nuevoId(), nombre, ambito: 'Trabajo', tipo: 'Evento Personal', dias, hora, hora_fin, desde: dia(-30), hasta: '', excepciones: [], notas: '', creado: ahora(), actualizado: ahora() })),
     };
 
     function tabla(nombre) {
@@ -239,7 +233,6 @@ const Datos = (() => {
       nomina_partidas: tabla('nomina_partidas'),
       objetivos: tabla('objetivos'),
       contenido: tabla('contenido'),
-      rutinas: tabla('rutinas'),
       async sesion() { return { local: true }; },
       async entrar() {},
       async salir() {},
