@@ -3,14 +3,15 @@
 *Nombre provisional. Empezada el 2026-10-25.*
 
 ## Qué hace
-Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Finanzas y Kok$. La app recuerda el último sector que abriste.
+Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Finanzas y Kok$. Al abrir la app sale siempre la Agenda en su vista Día (desde 2026-11-16).
 
 ### Agenda
+- **Día** (la que sale al abrir la app; desde 2026-11-16): arriba la fecha y una tira con los próximos 14 días ("Hoy", 17, 18…) para elegir día; debajo, una tarjeta grande por cada cosa de ese día, del color de su ámbito, con la hora de inicio y fin a la izquierda. El botón redondo de la derecha la marca como hecha; pulsando la tarjeta se edita. Se puede arrastrar una tarjeta a otro número de la tira para cambiarla de día. Aquí se ven también las cosas de días pasados si eliges uno.
 - **Mes**: calendario con un color por ámbito. Pulsa un día para ver lo que tiene debajo (o a la derecha en el PC).
 - **Semana**: los 7 días de la semana, de lunes a domingo, con sus entradas.
 - **Tablero**: una columna por ámbito con todo lo pendiente, ordenado por fecha.
 - **Filtros**: los botones de colores de arriba ocultan o muestran un ámbito.
-- **Ocultar pasadas** (primer botón de los filtros, activado por defecto): esconde todo lo de días anteriores a hoy, en todas las vistas. Muestra cuántas hay ocultas; púlsalo para verlas otra vez. Se recuerda en cada aparato. El resumen de la mañana sigue avisando de lo vencido sin hacer.
+- **Ocultar pasadas** (primer botón de los filtros, activado por defecto): esconde todo lo de días anteriores a hoy, en Mes, Semana y Tablero (en Día no sale). Muestra cuántas hay ocultas; púlsalo para verlas otra vez. Se recuerda en cada aparato. El resumen de la mañana sigue avisando de lo vencido sin hacer.
 - **Crear**: botón "+ Nueva" (en el móvil, el botón azul redondo) o "+ Añadir" en un día.
 - **Editar o borrar**: pulsa una entrada.
 - **Hecho**: pulsa el cuadradito de la izquierda.
