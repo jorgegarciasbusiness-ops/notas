@@ -76,7 +76,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 ## Cómo se abre
 - **En internet**: **https://jorgegarciasbusiness-ops.github.io/notas/**. Entras con tu correo y tu contraseña.
 - **En el PC**: acceso directo **Notas** en el Escritorio. Abre la app en su propia ventana (sin pestañas ni barra de direcciones).
-- **En el iPhone**: abre la dirección en Safari → botón Compartir → **Añadir a pantalla de inicio**. Queda como una app más, con su icono azul.
+- **En el iPhone**: abre la dirección en Safari → botón Compartir → **Añadir a pantalla de inicio**. Queda como una app más, con su icono (K amarilla sobre rojo).
 - **Modo prueba**: si `js/config.js` está vacío, la app guarda solo en el navegador de ese PC y trae datos de ejemplo.
 - Al volver a la app, se recargan los datos (por si cambiaste algo en el otro aparato).
 
@@ -106,4 +106,4 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 - Turnos: `esTurno` (ámbito Trabajo + /turno/i en el nombre, no cancelado) tiñe el día como los de varios días (`deVariosDias`, gana el `creado` más antiguo) y no lleva píldora en Mes. La tabla `rutinas` se borró el 2026-10-30 (`nube/10-quitar-rutinas.sql`; copia en `copias/2026-10-30-rutinas-antes-de-turnos.json`).
 - Tablas: `agenda` (con `fecha_fin` y `hora_fin` opcionales desde 2026-10-27, y `aviso_min` / `avisado_en`), `bandeja` (texto, creado), `paginas` (titulo, seccion, contenido en Markdown, orden), `gastos` (fecha, importe, concepto, categoria), `horas` (fecha, entrada, salida, horas, trabajo, nota), `ahorros` (fecha, importe, nota, objetivo_id opcional), `objetivos` (nombre, importe, fecha_limite opcional), `contenido` (pieza, fecha, redes text[], formato, tema, estado, enlace, vistas, notas), `nominas` (mes = día 1, neto; una por mes), `nomina_partidas` (mes, concepto, importe). Objetivo de ahorro (10.000 €) en `js/finanzas.js`. Koke apunta él la nómina y el reparto el primer mes; cuando se repita, el secretario puede apuntarlos (con su OK). El límite semanal (50 €) está en `js/finanzas.js`; el resumen muestra la página de sección Finanzas cuyo título empieza por "Plan". En Markdown, usar `≈` y no `~` (la virgulilla tacha texto). En `datos.js` se añaden en `TABLAS` y en el `return` de nube y local.
 - Páginas: Markdown con `marked` + `DOMPurify` (jsDelivr, versión fija). El secretario puede escribir páginas directamente en Markdown (tablas GFM, `- [ ]` casillas).
-- Iconos de la app en `iconos/`: una **K** blanca gruesa sobre azul (elegida por Koke, 2026-10-25).
+- Iconos de la app en `iconos/` (180, 192, 512 y `icono.ico` para el acceso del Escritorio): una **K** amarillo claro #FFFDB4 en Inter Tight 900 sobre rojo #F94500 (opción F, elegida por Koke el 2026-11-16; antes, K blanca sobre azul). Se generan con un canvas en el navegador. El iPhone guarda el icono al añadir la app: para ver uno nuevo hay que quitarla y volver a añadirla.
