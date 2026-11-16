@@ -33,6 +33,12 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 - Si cambias la fecha, la hora o el aviso de un evento, vuelve a avisar. Lo que ya está "Listo" o "Cancelado" no avisa.
 - Pulsar el botón otra vez los quita en ese aparato.
 
+### Eventos que se cierran solos
+- Cada 15 minutos, los **eventos que ya han terminado** se marcan como **Listo**: turnos, citas, reuniones, eventos, sesiones de estudio (Music, ALMOALB) y todo lo de **Viajes**.
+- Cuándo terminan: a su hora de fin; si no tienen hora de fin, una hora después de empezar; si no tienen hora, al acabar el último día.
+- **Nunca** se cierran solas las tareas, los recordatorios, las metas ni las publicaciones: esas las cierras tú.
+- Si un evento no se hizo, márcalo como **Cancelado** antes de que acabe y no se toca.
+
 ### Bandeja
 - Para apuntar algo rápido, sobre todo desde el iPhone: escribes y pulsas **Apuntar**.
 - **Dictar**: pulsa el micro, habla, y lo que dices se va escribiendo en la caja. Pulsa el micro otra vez para parar, revisa y **Apuntar**. La voz la pasa a texto el propio navegador (no se guarda ningún audio). Si en el iPhone no funciona dentro de la app, el micro del teclado hace lo mismo.
@@ -64,7 +70,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 - Cada pieza: nombre, fecha, redes (TikTok, Instagram, YouTube), formato, tema, estado, vistas, enlace y notas.
 
 ### Aspecto
-- **Modo claro / oscuro**: botón abajo del menú en el PC y botón redondo arriba a la derecha en el móvil. Al principio sigue al PC o al iPhone; si lo cambias, se queda como lo dejaste.
+- **Modos de color** (rebranding 2026-11-16): cuatro parejas de la paleta índigo #23003F, rojo #F94500, lila #BCACCE y amarillo claro #FFFDB4 → **Índigo** (fondo índigo, detalles lila), **Rojo** (fondo rojo, paneles amarillos, detalles índigo), **Lila** (fondo lila, paneles amarillos) y **Amarillo** (fondo amarillo, detalles rojos). Se cambian con el botón del asterisco (abajo del menú en el PC, redondo arriba a la derecha en el móvil): cada pulsación pasa al siguiente y se queda guardado en ese aparato. Sin elegir, sigue al sistema (oscuro → Índigo, claro → Amarillo). Estilo: letra Inter Tight, títulos grandes en mayúsculas, tarjetas de la agenda pintadas enteras del color de su ámbito y botones en forma de píldora.
 - Iconos de **línea fina** (elegidos el 2026-10-25). Los iconos nuevos tienen que seguir el mismo estilo.
 
 ## Cómo se abre
@@ -95,6 +101,7 @@ Sustituto de Notion hecho a tu medida. Sectores: Agenda, Bandeja, Páginas, Fina
 - Si se cambia algo de la base de datos: nuevo `nube/NN-*.sql`, ejecutarlo en el editor SQL de Supabase y subirlo también al repositorio.
 - Cada sector es un archivo en `js/` con `montar()` y `refrescar()`; se registra en `js/app.js` y en el menú de `index.html`. `app.js` limpia `onclick/onsubmit/onmousedown` del contenedor al cambiar de sector.
 - **Avisos**: `sw.js` (receptor de notificaciones; no guarda copias de la app) + `js/avisos.js` (botón y alta del aparato en `push_suscripciones`). La función de Supabase **avisos** (código en `nube/funciones/avisos/index.ts`, `verify_jwt` desactivado: no devuelve datos) la llama `pg_cron` cada minuto; usa `avisos_pendientes()` y marca `agenda.avisado_en`. Sus claves VAPID las creó ella misma en `push_claves` (nadie más puede leerlas). Para redesplegarla: herramienta `deploy_edge_function` del conector de Supabase.
+- **Cierre automático** (2026-11-06, `nube/11-completar-eventos.sql`): `pg_cron` job `completar-eventos` cada 15 min llama a `completar_eventos()`, que pone `estado = 'Listo'` cuando `fin_evento(agenda) <= now()` en tipos Evento Personal, Cita, Reunión, Music, ALMOALB o ámbito Viajes (nunca Tarea, Recordatorio, Meta, content). Copia previa en `copias/2026-11-06-agenda-antes-de-completar-eventos.json`. Pendiente subir el `.sql` al repositorio.
 - Arrastrar: `data-arrastre` (id) en píldoras y tarjetas, `data-soltar` (fecha) en días de Mes y Semana. Ratón con pointer events (empieza a 6 px); dedo con touch events y pulsación larga de 450 ms (`touchmove` no pasivo para frenar el desplazamiento). Mueve `fecha` y `fecha_fin` los mismos días y pone `avisado_en` a null.
 - Turnos: `esTurno` (ámbito Trabajo + /turno/i en el nombre, no cancelado) tiñe el día como los de varios días (`deVariosDias`, gana el `creado` más antiguo) y no lleva píldora en Mes. La tabla `rutinas` se borró el 2026-10-30 (`nube/10-quitar-rutinas.sql`; copia en `copias/2026-10-30-rutinas-antes-de-turnos.json`).
 - Tablas: `agenda` (con `fecha_fin` y `hora_fin` opcionales desde 2026-10-27, y `aviso_min` / `avisado_en`), `bandeja` (texto, creado), `paginas` (titulo, seccion, contenido en Markdown, orden), `gastos` (fecha, importe, concepto, categoria), `horas` (fecha, entrada, salida, horas, trabajo, nota), `ahorros` (fecha, importe, nota, objetivo_id opcional), `objetivos` (nombre, importe, fecha_limite opcional), `contenido` (pieza, fecha, redes text[], formato, tema, estado, enlace, vistas, notas), `nominas` (mes = día 1, neto; una por mes), `nomina_partidas` (mes, concepto, importe). Objetivo de ahorro (10.000 €) en `js/finanzas.js`. Koke apunta él la nómina y el reparto el primer mes; cuando se repita, el secretario puede apuntarlos (con su OK). El límite semanal (50 €) está en `js/finanzas.js`; el resumen muestra la página de sección Finanzas cuyo título empieza por "Plan". En Markdown, usar `≈` y no `~` (la virgulilla tacha texto). En `datos.js` se añaden en `TABLAS` y en el `return` de nube y local.
