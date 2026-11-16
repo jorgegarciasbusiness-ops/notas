@@ -562,6 +562,41 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--acento); ou
 /* Botón flotante y "+ Añadir" */
 .anadir { font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: .04em; }
 
+/* ---------- Vista Día (como la referencia: fecha, tira de días y tarjetas grandes) ---------- */
+.vista-dia { max-width: 760px; }
+.dia-fecha { margin: 4px 0 2px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--texto); opacity: .75; }
+.tira { display: flex; gap: 14px; align-items: baseline; overflow-x: auto; scrollbar-width: none; padding: 2px 0 14px; }
+.tira::-webkit-scrollbar { display: none; }
+.tira-dia {
+  flex: none; font-size: 34px; font-weight: 500; letter-spacing: -.03em; line-height: 1;
+  color: var(--texto); opacity: .45; text-transform: uppercase; position: relative;
+}
+.tira-dia:hover { opacity: 1; }
+.tira-dia.sel { color: var(--texto); opacity: 1; font-weight: 800; }
+.tira-dia.sel::after { content: ""; position: absolute; right: -10px; top: 50%; width: 6px; height: 6px; border-radius: 50%; background: var(--acento); }
+.tira-dia.destino { color: var(--acento); opacity: 1; }
+.tarjetas-dia { display: flex; flex-direction: column; gap: 10px; }
+.tarjeta-dia {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 14px; align-items: start;
+  background: var(--c); color: var(--sobre-color); border-radius: 30px; padding: 20px 20px 18px;
+}
+.tarjeta-dia.hecha, .tarjeta-dia.cancelada { opacity: .5; }
+.tarjeta-dia.hecha .td-nombre, .tarjeta-dia.cancelada .td-nombre { text-decoration: line-through; }
+.td-hora { display: flex; flex-direction: column; align-items: center; padding-top: 4px; line-height: 1; }
+.td-hora b { font-size: 20px; font-weight: 600; }
+.td-hora small { font-size: 11px; margin-top: 2px; }
+.td-hora i { width: 1.5px; height: 18px; background: currentColor; margin: 6px 0; opacity: .7; }
+.td-hora span { font-size: 11px; font-weight: 600; text-transform: uppercase; text-align: center; line-height: 1.2; }
+.td-cuerpo { text-align: left; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.td-nombre { font-size: clamp(26px, 5vw, 40px); font-weight: 800; line-height: .95; text-transform: uppercase; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.td-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .75; }
+.td-check {
+  width: 40px; height: 26px; border-radius: 999px; border: 2px solid currentColor;
+  display: grid; place-items: center; font-size: 14px; font-weight: 800;
+}
+.tarjeta-dia.hecha .td-check { background: var(--sobre-color); color: var(--c); }
+.vista-dia > .anadir { margin-top: 10px; color: var(--texto); opacity: .75; }
+
 /* ---------- Pantallas medianas ---------- */
 @media (max-width: 1100px) {
   .semana { grid-template-columns: 1fr; }
