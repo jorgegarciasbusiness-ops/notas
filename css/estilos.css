@@ -110,6 +110,8 @@
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+/* Sin zoom al tocar dos veces en el iPhone (pellizcar sigue funcionando) */
+html, body, button, a, input, select, textarea, label { touch-action: manipulation; }
 body {
   background: var(--fondo);
   color: var(--texto);
