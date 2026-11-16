@@ -63,22 +63,26 @@ function avisar(texto) {
     if (actual) sectores[actual].refrescar?.();
   });
 
-  // ---------- Modo claro / oscuro: sigue al sistema hasta que lo cambias con el botón ----------
+  // ---------- Modos de color: el botón pasa al siguiente; sin elegir, sigue al sistema ----------
   const raizHtml = document.documentElement;
   const botonTema = document.getElementById('tema');
   const oscuroSistema = matchMedia('(prefers-color-scheme: dark)');
-  const temaActual = () => raizHtml.dataset.tema || (oscuroSistema.matches ? 'oscuro' : 'claro');
-  const SOL = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>';
-  const LUNA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
+  // [nombre, texto, color de fondo (para la barra del iPhone)]
+  const TEMAS = [['indigo', 'Índigo', '#23003F'], ['rojo', 'Rojo', '#F94500'], ['lila', 'Lila', '#BCACCE'], ['amarillo', 'Amarillo', '#FFFDB4']];
+  const temaActual = () => raizHtml.dataset.tema || (oscuroSistema.matches ? 'indigo' : 'amarillo');
+  const ASTERISCO = '<svg class="asterisco" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3L5.3 18.7"/></svg>';
 
   function pintarBotonTema() {
-    const oscuro = temaActual() === 'oscuro';
-    botonTema.querySelector('.icono').innerHTML = oscuro ? SOL : LUNA;
-    botonTema.querySelector('.tema-texto').textContent = oscuro ? 'Modo claro' : 'Modo oscuro';
-    botonTema.setAttribute('aria-label', oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+    const i = TEMAS.findIndex(t => t[0] === temaActual());
+    const [, texto, color] = TEMAS[i];
+    botonTema.querySelector('.icono').innerHTML = ASTERISCO;
+    botonTema.querySelector('.tema-texto').textContent = `Color: ${texto}`;
+    botonTema.setAttribute('aria-label', `Cambiar color (ahora ${texto}, siguiente ${TEMAS[(i + 1) % TEMAS.length][1]})`);
+    document.querySelector('meta[name=theme-color]')?.setAttribute('content', color);
   }
   botonTema.addEventListener('click', () => {
-    const nuevo = temaActual() === 'oscuro' ? 'claro' : 'oscuro';
+    const i = TEMAS.findIndex(t => t[0] === temaActual());
+    const nuevo = TEMAS[(i + 1) % TEMAS.length][0];
     raizHtml.dataset.tema = nuevo;
     try { localStorage.setItem('notas.tema', nuevo); } catch { /* sin memoria: vale solo para esta visita */ }
     pintarBotonTema();
