@@ -421,8 +421,11 @@ const Agenda = (() => {
     const desplazar = () => {
       if (arrastre !== a || !a.activo) return;
       const margen = 70;
-      if (a.y < margen) scrollBy(0, -12);
-      else if (a.y > innerHeight - margen) scrollBy(0, 12);
+      // En el móvil se desplaza la zona de contenido; en el PC, la página
+      const zona = document.getElementById('contenido');
+      const bajar = d => (zona.scrollHeight > zona.clientHeight + 1 ? zona : window).scrollBy(0, d);
+      if (a.y < margen) bajar(-12);
+      else if (a.y > innerHeight - margen) bajar(12);
       requestAnimationFrame(desplazar);
     };
     requestAnimationFrame(desplazar);
