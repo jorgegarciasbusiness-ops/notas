@@ -77,7 +77,8 @@ const Agenda = (() => {
   let raiz, dlg, todas = [];
 
   // ocultarPasadas: no enseña lo de días anteriores a hoy (se recuerda en cada aparato)
-  const estado = { vista: recordar('vista') || 'mes', ref: new Date(), dia: hoyISO(), ocultos: new Set(), ocultarPasadas: recordar('pasadas') !== 'ver' };
+  // Al abrir la app sale siempre la vista Día (decisión de Koke, 2026-11-16)
+  const estado = { vista: 'dia', ref: new Date(), dia: hoyISO(), ocultos: new Set(), ocultarPasadas: recordar('pasadas') !== 'ver' };
 
   // ---------- Piezas de la pantalla ----------
   function tarjeta(e, { conFecha = false } = {}) {
@@ -105,6 +106,7 @@ const Agenda = (() => {
   }
 
   function titulo() {
+    if (estado.vista === 'dia') return estado.dia === hoyISO() ? 'Hoy' : cap(`${DIAS_LARGOS[deISO(estado.dia).getDay()]} ${deISO(estado.dia).getDate()}`);
     if (estado.vista === 'mes') return cap(`${MESES[estado.ref.getMonth()]} ${estado.ref.getFullYear()}`);
     if (estado.vista === 'semana') {
       const a = lunesDe(estado.ref), b = sumarDias(a, 6);
@@ -124,7 +126,7 @@ const Agenda = (() => {
     return `<header class="ag-cab">
       <h1>${titulo()}</h1>
       ${nav}
-      <div class="segmentado">${boton('mes', 'Mes')}${boton('semana', 'Semana')}${boton('tablero', 'Tablero')}</div>
+      <div class="segmentado">${boton('dia', 'Día')}${boton('mes', 'Mes')}${boton('semana', 'Semana')}${boton('tablero', 'Tablero')}</div>
       <button class="btn primario nueva" data-accion="nueva" aria-label="Nueva entrada"><b>+</b> <span>Nueva</span></button>
     </header>`;
   }
@@ -133,7 +135,7 @@ const Agenda = (() => {
     const pasadas = todas.filter(e => finDe(e) < hoyISO()).length;
     const interruptor = `<button class="chip interruptor ${estado.ocultarPasadas ? 'activo' : ''}" data-accion="pasadas" aria-pressed="${estado.ocultarPasadas}">
         ${estado.ocultarPasadas ? `Pasadas ocultas (${pasadas})` : 'Ocultar pasadas'}</button>`;
-    return `<div class="filtros">${interruptor}${AMBITOS.map(a => `<button class="chip ${slug(a)} ${estado.ocultos.has(a) ? 'apagado' : ''}" data-accion="filtro" data-ambito="${esc(a)}"><i></i>${esc(a)}</button>`).join('')}</div>`;
+    return `<div class="filtros">${estado.vista === 'dia' ? '' : interruptor}${AMBITOS.map(a => `<button class="chip ${slug(a)} ${estado.ocultos.has(a) ? 'apagado' : ''}" data-accion="filtro" data-ambito="${esc(a)}"><i></i>${esc(a)}</button>`).join('')}</div>`;
   }
 
   function panelDia(iso, items) {
@@ -186,6 +188,47 @@ const Agenda = (() => {
     return `<div class="semana">${html}</div>`;
   }
 
+  // Vista Día (la que sale al abrir): fecha, tira de días y tarjetas grandes del día elegido, como la referencia de Koke
+  function vistaDia(lista) {
+    const hoy = hoyISO(), sel = estado.dia;
+    const inicio = sel < hoy || sel > aISO(sumarDias(deISO(hoy), 13)) ? sel : hoy;
+    let tira = '';
+    for (let i = 0; i < 14; i++) {
+      const iso = aISO(sumarDias(deISO(inicio), i));
+      tira += `<button class="tira-dia ${iso === sel ? 'sel' : ''}" data-accion="dia" data-fecha="${iso}" data-soltar="${iso}">${iso === hoy ? 'Hoy' : deISO(iso).getDate()}</button>`;
+    }
+    const d = deISO(sel);
+    const items = porDia(lista).get(sel) || [];
+    // Hora grande y minutos pequeños: "08" / "30"; sin hora, "Todo el día"
+    const reloj = h => h ? `<b>${h.slice(0, 2)}</b><small>${h.slice(3, 5)}</small>` : '';
+    const tarjetas = items.map(e => {
+      const varios = finDe(e) !== e.fecha;
+      const n = Math.round((deISO(sel) - deISO(e.fecha)) / 864e5) + 1, total = Math.round((deISO(finDe(e)) - deISO(e.fecha)) / 864e5) + 1;
+      const ini = varios ? (sel === e.fecha ? e.hora : '') : e.hora;
+      const fin = varios ? (sel === finDe(e) ? e.hora_fin : '') : e.hora_fin;
+      const meta = [
+        esc(e.tipo), esc(e.ambito),
+        varios ? `Día ${n} de ${total}` : '',
+        e.estado === 'En progreso' ? 'En progreso' : '',
+        e.prioridad === 'Alta' && !terminada(e) ? 'Alta' : '',
+      ].filter(Boolean).map(t => `<span>${t}</span>`).join('');
+      return `<article class="tarjeta-dia ${slug(e.ambito)} ${e.estado === 'Listo' ? 'hecha' : ''} ${e.estado === 'Cancelado' ? 'cancelada' : ''}" data-arrastre="${e.id}">
+        <div class="td-hora">${ini || fin ? `${reloj(ini)}${fin ? `<i></i>${reloj(fin)}` : ''}` : '<span>Todo<br>el día</span>'}</div>
+        <button class="td-cuerpo" data-accion="editar" data-id="${e.id}">
+          <span class="td-nombre">${esc(e.nombre)}</span>
+          <span class="td-meta">${meta}</span>
+        </button>
+        <button class="td-check" data-accion="check" data-id="${e.id}" aria-label="${e.estado === 'Listo' ? 'Marcar como pendiente' : 'Marcar como hecha'}">${e.estado === 'Listo' ? '✓' : ''}</button>
+      </article>`;
+    }).join('');
+    return `<div class="vista-dia">
+      <p class="dia-fecha">${DIAS_LARGOS[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}</p>
+      <div class="tira">${tira}</div>
+      <div class="tarjetas-dia">${tarjetas || '<p class="vacio">Nada este día.</p>'}</div>
+      <button class="anadir" data-accion="nueva" data-fecha="${sel}">+ Añadir este día</button>
+    </div>`;
+  }
+
   function vistaTablero(lista) {
     const columnas = AMBITOS.filter(a => !estado.ocultos.has(a)).map(a => {
       const items = ordenar(lista.filter(e => e.ambito === a && !terminada(e)));
@@ -205,8 +248,9 @@ const Agenda = (() => {
       avisar('No se ha podido cargar la agenda. Revisa la conexión.');
     }
     const hoy = hoyISO();
-    const visibles = todas.filter(e =>!estado.ocultos.has(e.ambito) && !(estado.ocultarPasadas && finDe(e) < hoy));
-    const cuerpo = { mes: vistaMes, semana: vistaSemana, tablero: vistaTablero }[estado.vista] || vistaMes;
+    // En la vista Día se ve todo lo del día elegido, aunque sea pasado
+    const visibles = todas.filter(e => !estado.ocultos.has(e.ambito) && !(estado.ocultarPasadas && estado.vista !== 'dia' && finDe(e) < hoy));
+    const cuerpo = { dia: vistaDia, mes: vistaMes, semana: vistaSemana, tablero: vistaTablero }[estado.vista] || vistaDia;
     raiz.innerHTML = cabecera() + filtros() + cuerpo(visibles);
   }
 
@@ -306,6 +350,7 @@ const Agenda = (() => {
   // ---------- Qué pasa al pulsar ----------
   function mover(paso) {
     const r = estado.ref;
+    if (estado.vista === 'dia') { estado.dia = aISO(sumarDias(deISO(estado.dia), paso)); estado.ref = deISO(estado.dia); return; }
     estado.ref = estado.vista === 'mes' ? new Date(r.getFullYear(), r.getMonth() + paso, 1) : sumarDias(r, 7 * paso);
   }
 
@@ -314,7 +359,7 @@ const Agenda = (() => {
     if (!b || !raiz.contains(b) || Date.now() < ignorarClicHasta) return;  // soltar lo arrastrado no cuenta como pulsar
     const { accion, id, fecha, vista, ambito } = b.dataset;
     switch (accion) {
-      case 'vista': estado.vista = vista; recordar('vista', vista); break;
+      case 'vista': estado.vista = vista; break;
       case 'ant': mover(-1); break;
       case 'sig': mover(1); break;
       case 'hoy': estado.ref = new Date(); estado.dia = hoyISO(); break;
@@ -341,7 +386,7 @@ const Agenda = (() => {
       case 'editar': {
         return abrirFormulario(todas.find(x => x.id === id));
       }
-      case 'nueva': return abrirFormulario({ fecha: fecha || (estado.vista === 'mes' ? estado.dia : hoyISO()), ambito });
+      case 'nueva': return abrirFormulario({ fecha: fecha || (estado.vista === 'mes' || estado.vista === 'dia' ? estado.dia : hoyISO()), ambito });
       default: return;
     }
     render();

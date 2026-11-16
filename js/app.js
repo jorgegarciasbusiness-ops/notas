@@ -21,18 +21,14 @@ function avisar(texto) {
 
   function abrir(nombre) {
     actual = nombre;
-    try { localStorage.setItem('notas.sector', nombre); } catch { /* sin memoria */ }
     document.querySelectorAll('.sector').forEach(b => b.classList.toggle('activo', b.dataset.sector === nombre));
     // Cada sector pone sus propios manejadores; se quitan los del anterior
     contenido.onclick = contenido.onsubmit = contenido.onmousedown = contenido.oninput = contenido.onkeydown = null;
     sectores[nombre].montar(contenido);
   }
 
-  function ultimoSector() {
-    let s = null;
-    try { s = localStorage.getItem('notas.sector'); } catch { /* sin memoria */ }
-    return sectores[s] ? s : 'agenda';
-  }
+  // Al abrir la app sale siempre la Agenda, en su vista Día (decisión de Koke, 2026-11-16)
+  const SECTOR_INICIAL = 'agenda';
 
   document.querySelector('.sectores').addEventListener('click', ev => {
     const b = ev.target.closest('.sector');
@@ -120,7 +116,7 @@ function avisar(texto) {
       try {
         await Datos.entrar(f.elements.email.value.trim(), f.elements.clave.value);
         document.body.classList.remove('sin-sesion');
-        abrir(ultimoSector());
+        abrir(SECTOR_INICIAL);
         Avisos.iniciar();
       } catch (e) {
         error.textContent = /invalid/i.test(e.message || '') ? 'Correo o contraseña incorrectos.' : 'No se ha podido entrar. Revisa la conexión.';
@@ -134,7 +130,7 @@ function avisar(texto) {
   (async () => {
     let sesion = null;
     try { sesion = await Datos.sesion(); } catch { /* sin conexión: se pide entrar */ }
-    if (sesion) { abrir(ultimoSector()); Avisos.iniciar(); }
+    if (sesion) { abrir(SECTOR_INICIAL); Avisos.iniciar(); }
     else pantallaEntrar();
   })();
 })();
