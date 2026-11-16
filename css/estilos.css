@@ -112,6 +112,8 @@
 html, body { margin: 0; }
 /* Sin zoom al tocar dos veces en el iPhone (pellizcar sigue funcionando) */
 html, body, button, a, input, select, textarea, label { touch-action: manipulation; }
+/* Sin "rebote" al deslizar más allá del principio o del final: en el iPhone arrastraba también la barra de abajo */
+html, body { overscroll-behavior: none; }
 body {
   background: var(--fondo);
   color: var(--texto);
